@@ -1,10 +1,11 @@
 name = "Z2Algebra"
 uuid = "fff55359-a81b-4d83-b0e7-1c8be1053a6b"
-authors = ["Tianyi Pu <912396513@qq.com> and contributors"]
 version = "1.0.0-DEV"
+authors = ["Tianyi Pu <912396513@qq.com> and contributors"]
 
 [compat]
 julia = "1.10.10"
+julia = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

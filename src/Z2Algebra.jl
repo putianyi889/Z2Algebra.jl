@@ -1,5 +1,11 @@
 module Z2Algebra
 
-# Write your package code here.
+export Z2Number, Z2RowVecBlock, Z2ColVecBlock, Z2MatrixBlock
+
+include("number.jl")
+include("blockutils.jl")
+include("vector.jl")
+include("matrix.jl")
+include("linearalgebra.jl")
 
 end

@@ -1,13 +1,33 @@
 import Base: size, getindex, unsafe_getindex, @propagate_inbounds, copy, unsafe_setindex!, setindex!
 
+"""
+    Z2RowVecBlock(v::AbstractVector)
+    Z2RowVecBlock(data::UInt64, length::Int)
+    unsafe_Z2RowVecBlock(data::UInt64, length::Int)
+
+A block of a Z2 vector stored as the first row of [`Z2MatrixBlock`](@ref). The unsafe version is slightly faster as it doesn't apply a mask to the data. See also [`Z2ColVecBlock`](@ref).
+"""
 mutable struct Z2RowVecBlock <: AbstractVector{Z2Number}
     data::UInt64
     length::Int
+
+    global unsafe_Z2RowVecBlock(data::UInt64, length::Int) = new(data, length)
+    Z2RowVecBlock(data::UInt64, length::Int) = unsafe_Z2RowVecBlock(data & (COL_MASK >> (8-length)), length)
 end
 
+"""
+    Z2ColVecBlock(v::AbstractVector)
+    Z2ColVecBlock(data::UInt64, length::Int)
+    unsafe_Z2ColVecBlock(data::UInt64, length::Int)
+
+A block of a Z2 vector stored as the first column of [`Z2MatrixBlock`](@ref). The unsafe version is slightly faster as it doesn't apply a mask to the data. See also [`Z2RowVecBlock`](@ref).
+"""
 mutable struct Z2ColVecBlock <: AbstractVector{Z2Number}
     data::UInt64
     length::Int
+
+    global unsafe_Z2ColVecBlock(data::UInt64, length::Int) = new(data, length)
+    Z2ColVecBlock(data::UInt64, length::Int) = unsafe_Z2ColVecBlock(data & (ROW_MASK >> 8(8-length)), length)
 end
 
 const Z2VectorBlock = Union{Z2RowVecBlock, Z2ColVecBlock}
@@ -21,7 +41,7 @@ function Z2RowVecBlock(v::AbstractVector)
     for i in eachindex(v)
         data |= UInt64(Z2Number(v[i])) << (i - 1)
     end
-    return Z2RowVecBlock(data, length(v))
+    return unsafe_Z2RowVecBlock(data, length(v))
 end
 
 function Z2ColVecBlock(v::AbstractVector)
@@ -33,13 +53,13 @@ function Z2ColVecBlock(v::AbstractVector)
     for i in eachindex(v)
         data |= UInt64(Z2Number(v[i])) << ((i - 1) * 8)
     end
-    return Z2ColVecBlock(data, length(v))
+    return unsafe_Z2ColVecBlock(data, length(v))
 end
 
 size(v::Z2VectorBlock) = (v.length,)
 
-copy(v::Z2RowVecBlock) = Z2RowVecBlock(v.data, v.length)
-copy(v::Z2ColVecBlock) = Z2ColVecBlock(v.data, v.length)
+copy(v::Z2RowVecBlock) = unsafe_Z2RowVecBlock(v.data, v.length)
+copy(v::Z2ColVecBlock) = unsafe_Z2ColVecBlock(v.data, v.length)
 
 unsafe_getindex(v::Z2RowVecBlock, i) = Z2Number(v.data >> (i - 1))
 unsafe_getindex(v::Z2ColVecBlock, i) = Z2Number(v.data >> ((i - 1) * 8))

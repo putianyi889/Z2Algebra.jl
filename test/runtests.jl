@@ -1,5 +1,6 @@
 using Z2Algebra
 using Test
+using LinearAlgebra
 
 @testset "number" begin
     @testset "constructor" begin
@@ -133,5 +134,8 @@ end
             0 0 0 0 0;
             1 0 1 1 0;
         ]
+
+        @test dot(u1, u2) ≡ Z2Number(true)
+        @test dot(v1, v2) ≡ Z2Number(true)
     end
 end

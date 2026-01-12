@@ -2,6 +2,11 @@ using Z2Algebra
 using Test
 using LinearAlgebra
 
+function test_type_value(a, b)
+    @test typeof(a) == typeof(b)
+    @test a == b
+end
+
 @testset "number" begin
     @testset "constructor" begin
         @test Z2Number(0) ≡ Z2Number(false)
@@ -31,111 +36,69 @@ using LinearAlgebra
         @test_throws DivideError a / b
         @test b / a ≡ b
         @test_throws DivideError b / b
-    end
-end
 
-@testset "vector" begin
-    @testset "constructor" begin
-        v = Z2RowVecBlock(0b10110, 5)
-        u = Z2ColVecBlock(0x0100010100, 5)
+        @test -a ≡ a
+        @test -b ≡ b
 
-        @test v isa Z2RowVecBlock
-        @test u isa Z2ColVecBlock
+        @test a - a ≡ b
+        @test a - b ≡ a
+        @test b - a ≡ a
+        @test b - b ≡ b
 
-        @test eltype(v) ≡ eltype(u) ≡ Z2Number
-
-        @test v == [Z2Number(false), Z2Number(true), Z2Number(true), Z2Number(false), Z2Number(true)]
-        @test u == [Z2Number(false), Z2Number(true), Z2Number(true), Z2Number(false), Z2Number(true)]
-
-        @test u == v
-
-        @test v == Z2RowVecBlock([0, 1, 1, 0, 1]) == Z2ColVecBlock([0, 1, 1, 0, 1]) == u
-        @test v == Z2RowVecBlock(v) == Z2ColVecBlock(v)
-        @test u == Z2RowVecBlock(u) == Z2ColVecBlock(u)
+        @test inv(a) ≡ a
+        @test_throws DivideError inv(b)
     end
 
-    @testset "basics" begin
-        data = [0, 1, 1, 0, 1]
-        v = Z2RowVecBlock(data)
-        u = Z2ColVecBlock(data)
+    @testset "properties" begin
+        a = Z2Number(true)
+        b = Z2Number(false)
 
-        @test v == data == u
+        @test isone(a)
+        @test !isone(b)
+        @test !iszero(a)
+        @test iszero(b)
 
-        @test v[:] isa Z2RowVecBlock
-        @test u[:] isa Z2ColVecBlock
+        @test isodd(a)
+        @test !isodd(b)
+        @test !iseven(a)
+        @test iseven(b)
 
-        @test v[:] == v
-        @test u[:] == u
+        @test isfinite(a)
+        @test isfinite(b)
+        @test !isinf(a)
+        @test !isinf(b)
+        @test !isnan(a)
+        @test !isnan(b)
 
-        v[1] = 1
-        u[1] = 1
-        data[1] = 1
-        @test v == data == u
-
-        v[2] = 0
-        u[2] = 0
-        data[2] = 0
-        @test v == data == u
+        @test !signbit(a)
+        @test !signbit(b)
     end
 
-    @testset "arithmetic" begin
-        v1 = Z2RowVecBlock([0, 1, 1, 0, 1])
-        v2 = Z2RowVecBlock([1, 0, 1, 1, 0])
-        u1 = Z2ColVecBlock([0, 1, 1, 0, 1])
-        u2 = Z2ColVecBlock([1, 0, 1, 1, 0])
-
-        @test v1 + v2 == Z2RowVecBlock([1, 1, 0, 1, 1])
-        @test u1 + u2 == Z2ColVecBlock([1, 1, 0, 1, 1])
-
-        @test v1 - v2 == Z2RowVecBlock([1, 1, 0, 1, 1])
-        @test u1 - u2 == Z2ColVecBlock([1, 1, 0, 1, 1])
-
-        @test u1 * v2 isa Z2MatrixBlock
-        @test u1 * v2 == [
-            0 0 0 0 0;
-            1 0 1 1 0;
-            1 0 1 1 0;
-            0 0 0 0 0;
-            1 0 1 1 0;
-        ]
+    @testset "comparison" begin
+        a = Z2Number(true)
+        b = Z2Number(false)
+        
+        @test b < a
+        @test !(a < b)
+        @test !(a < a)
+        @test !(b < b)
     end
 end
 
 @testset "matrix" begin
-    @testset "constructor" begin
-        M = Z2MatrixBlock(0x0123456789abcdef, (8, 8))
-        @test M isa Z2MatrixBlock
-        @test eltype(M) ≡ Z2Number
-        @test M == Z2MatrixBlock([
-            1 1 1 1 0 1 1 1;
-            1 0 1 1 0 0 1 1;
-            1 1 0 1 0 1 0 1;
-            1 0 0 1 0 0 0 1;
-            1 1 1 0 0 1 1 0;
-            1 0 1 0 0 0 1 0;
-            1 1 0 0 0 1 0 0;
-            1 0 0 0 0 0 0 0;
-        ])
-    end
-end
+    @testset "square" begin
+        data = rand(Bool, 10, 10)
+        A = Z2Matrix(data)
+        MA = Matrix(A)
 
-@testset "algebra" begin
-    @testset "multiplication" begin
-        v1 = Z2RowVecBlock([0, 1, 1, 0, 1])
-        v2 = Z2RowVecBlock([1, 0, 1, 1, 0])
-        u1 = Z2ColVecBlock([0, 1, 1, 0, 1])
-        u2 = Z2ColVecBlock([1, 0, 1, 1, 0])
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test MA isa Matrix{Z2Number}
+        @test A == MA == data
 
-        @test u1 * v2 isa Z2MatrixBlock
-        @test u1 * v2 == [
-            0 0 0 0 0;
-            1 0 1 1 0;
-            1 0 1 1 0;
-            0 0 0 0 0;
-            1 0 1 1 0;
-        ]
+        @test one(A) isa Z2Matrix{Matrix{Z2Block}}
+        @test one(A) == one(MA)
 
-        @test dot(u1, u2) ≡ Z2Number(true)
-        @test dot(v1, v2) ≡ Z2Number(true)
+        @test zero(A) isa Z2Matrix{Matrix{Z2Block}}
+        @test zero(A) == zero(MA)
     end
 end

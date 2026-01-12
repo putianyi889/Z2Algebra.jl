@@ -1,88 +1,76 @@
-import Base: size, getindex, unsafe_getindex, @propagate_inbounds, copy, unsafe_setindex!, setindex!
+import Base: size, getindex, @propagate_inbounds, copy, setindex!
 
-"""
-    Z2RowVecBlock(v::AbstractVector)
-    Z2RowVecBlock(data::UInt64, length::Int)
-    unsafe_Z2RowVecBlock(data::UInt64, length::Int)
+struct Z2RowVector{B<:AbstractVector{Z2Block}} <: AbstractVector{Z2Number}
+    blocks::B
+    tailsize::Int
 
-A block of a Z2 vector stored as the first row of [`Z2MatrixBlock`](@ref). The unsafe version is slightly faster as it doesn't apply a mask to the data. See also [`Z2ColVecBlock`](@ref).
-"""
-mutable struct Z2RowVecBlock <: AbstractVector{Z2Number}
-    data::UInt64
-    length::Int
-
-    global unsafe_Z2RowVecBlock(data::UInt64, length::Int) = new(data, length)
-    Z2RowVecBlock(data::UInt64, length::Int) = unsafe_Z2RowVecBlock(data & (COL_MASK >> (8-length)), length)
+    global _Z2RowVector(blocks::AbstractVector{Z2Block}, tailsize::Int) = new{typeof(blocks)}(blocks, tailsize)
 end
 
-"""
-    Z2ColVecBlock(v::AbstractVector)
-    Z2ColVecBlock(data::UInt64, length::Int)
-    unsafe_Z2ColVecBlock(data::UInt64, length::Int)
+struct Z2ColVector{B<:AbstractVector{Z2Block}} <: AbstractVector{Z2Number}
+    blocks::B
+    tailsize::Int
 
-A block of a Z2 vector stored as the first column of [`Z2MatrixBlock`](@ref). The unsafe version is slightly faster as it doesn't apply a mask to the data. See also [`Z2RowVecBlock`](@ref).
-"""
-mutable struct Z2ColVecBlock <: AbstractVector{Z2Number}
-    data::UInt64
-    length::Int
-
-    global unsafe_Z2ColVecBlock(data::UInt64, length::Int) = new(data, length)
-    Z2ColVecBlock(data::UInt64, length::Int) = unsafe_Z2ColVecBlock(data & (ROW_MASK >> 8(8-length)), length)
+    global _Z2ColVector(blocks::AbstractVector{Z2Block}, tailsize::Int) = new{typeof(blocks)}(blocks, tailsize)
 end
 
-const Z2VectorBlock = Union{Z2RowVecBlock, Z2ColVecBlock}
-
-function Z2RowVecBlock(v::AbstractVector)
+function Z2RowVector(v::AbstractVector)
     Base.require_one_based_indexing(v)
-    if (length(v) > 8)
-        throw(ArgumentError("Length of Z2RowVecBlock cannot exceed 8. Got length=$(length(v))."))
+    blocks = zeros(UInt64, size_to_blocksize(length(v)))
+    tailsize = size_to_tailsize(length(v))
+    for i in 1:length(blocks)-1
+        blocks[i] = packrow((isodd(v[8i+k]) for k in -7:0)...)
     end
-    data = zero(UInt64)
-    for i in eachindex(v)
-        data |= UInt64(Z2Number(v[i])) << (i - 1)
-    end
-    return unsafe_Z2RowVecBlock(data, length(v))
+    blocks[end] = packrow((isodd(v[end+k]) for k in -tailsize:0)..., zeros(Bool, 7-tailsize)...)
+    return _Z2RowVector(blocks, tailsize)
 end
 
-function Z2ColVecBlock(v::AbstractVector)
+function Z2ColVector(v::AbstractVector)
     Base.require_one_based_indexing(v)
-    if (length(v) > 8)
-        throw(ArgumentError("Length of Z2ColVecBlock cannot exceed 8. Got length=$(length(v))."))
+    blocks = zeros(UInt64, size_to_blocksize(length(v)))
+    tailsize = size_to_tailsize(length(v))
+    for i in 1:length(blocks)-1
+        blocks[i] = packcolumn((isodd(v[8i+k]) for k in -7:0)...)
     end
-    data = zero(UInt64)
-    for i in eachindex(v)
-        data |= UInt64(Z2Number(v[i])) << ((i - 1) * 8)
+    blocks[end] = packcolumn((isodd(v[end+k]) for k in -tailsize:0)..., zeros(Bool, 7-tailsize)...)
+    return _Z2ColVector(blocks, tailsize)
+end
+
+function check_z2array_valid(v::Z2RowVector)
+    for i in 1:length(v.blocks)-1
+        @assert v.blocks[i] <= ROW_MASK
     end
-    return unsafe_Z2ColVecBlock(data, length(v))
+    @assert v.blocks[end] & (ROW_MASK << 1 << v.tailsize) == 0
 end
 
-size(v::Z2VectorBlock) = (v.length,)
-
-copy(v::Z2RowVecBlock) = unsafe_Z2RowVecBlock(v.data, v.length)
-copy(v::Z2ColVecBlock) = unsafe_Z2ColVecBlock(v.data, v.length)
-
-unsafe_getindex(v::Z2RowVecBlock, i) = Z2Number(v.data >> (i - 1))
-unsafe_getindex(v::Z2ColVecBlock, i) = Z2Number(v.data >> ((i - 1) * 8))
-
-function unsafe_setindex!(v::Z2RowVecBlock, x::Z2Number, i)
-    v.data = (v.data & ~(UInt64(1) << (i - 1))) | (UInt64(x) << (i - 1))
-    return x
+function check_z2array_valid(v::Z2ColVector)
+    for i in 1:length(v.blocks)-1
+        @assert iszero(v.blocks[i] & ~COL_MASK)
+    end
+    @assert iszero(v.blocks[end] & (COL_MASK << 8 << 8v.tailsize))
 end
 
-function unsafe_setindex!(v::Z2ColVecBlock, x::Z2Number, i)
-    v.data = (v.data & ~(UInt64(1) << ((i - 1) * 8))) | (UInt64(x) << ((i - 1) * 8))
-    return x
-end
+size(v::Z2RowVector) = (blocktailsize_to_size(length(v.blocks), v.tailsize), )
+size(v::Z2ColVector) = (blocktailsize_to_size(length(v.blocks), v.tailsize), )
 
-getindex(v::Z2VectorBlock, ::Colon) = copy(v)
-
-@propagate_inbounds function getindex(v::Z2VectorBlock, i::Integer)
+@propagate_inbounds function getindex(v::Z2RowVector, i::Integer)
     @boundscheck checkbounds(v, i)
-    return unsafe_getindex(v, i)
+    return Z2Number(rowgetindex(v.blocks[cld(i,8)].data, (i-1)%8))
 end
 
-@propagate_inbounds function setindex!(v::Z2VectorBlock, x, i::Integer)
+@propagate_inbounds function getindex(v::Z2ColVector, i::Integer)
     @boundscheck checkbounds(v, i)
-    return unsafe_setindex!(v, Z2Number(x), i)
+    return Z2Number(colgetindex(v.blocks[cld(i,8)].data, (i-1)%8))
 end
 
+@propagate_inbounds function setindex!(v::Z2RowVector, x, i::Integer)
+    @boundscheck checkbounds(v, i)
+    v.blocks[cld(i,8)] = rowsetindex(v.blocks[cld(i,8)], isodd(x), (i-1)%8)
+    return isodd(x)
+end
+
+@propagate_inbounds function setindex!(v::Z2ColVector, x, i::Integer)
+    @boundscheck checkbounds(v, i)
+    v.blocks[cld(i,8)] = colsetindex(v.blocks[cld(i,8)], isodd(x), (i-1)%8)
+    return isodd(x)
+end

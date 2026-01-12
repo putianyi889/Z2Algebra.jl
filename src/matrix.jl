@@ -1,47 +1,112 @@
-import Base: size, getindex, unsafe_getindex
-import Base: ones, zeros
+import Base: size, getindex, isbitstype, one, similar, copymutable
+import LinearAlgebra: norm, copy_similar
+import Random: rand, rand!
 
-"""
-    Z2MatrixBlock(A::AbstractMatrix)
-    Z2MatrixBlock(data::UInt64, size::Tuple{Int, Int})
-    unsafe_Z2MatrixBlock(data::UInt64, size::Tuple{Int, Int})
+struct Z2Matrix{B<:AbstractMatrix{Z2Block}} <: AbstractMatrix{Z2Number}
+    blocks::B
+    tailsize::Tuple{Int,Int}
 
-A block of a Z2 matrix stored as an `UInt64` in the row-major order. The lowest bit represents the top-left entry. The unsafe version is slightly faster as it doesn't apply a mask to the data. See also [`Z2RowVecBlock`](@ref) and [`Z2ColVecBlock`](@ref).
-"""
-mutable struct Z2MatrixBlock <: AbstractMatrix{Z2Number}
-    data::UInt64
-    size::Tuple{Int, Int}
-
-    global unsafe_Z2MatrixBlock(data::UInt64, size::Tuple{Int, Int}) = new(data, size)
-    Z2MatrixBlock(data::UInt64, size::Tuple{Int, Int}) = unsafe_Z2MatrixBlock(data & blockones(size[1], size[2]), size)
+    global _Z2Matrix(blocks::AbstractMatrix{Z2Block}, tailsize::Tuple{Int,Int}) = new{typeof(blocks)}(blocks, tailsize)
 end
 
-function Z2MatrixBlock(A::AbstractMatrix)
+function _check_z2matrix(blocks, tailsize)
+    @assert 0 <= tailsize[1] <= 7
+    @assert 0 <= tailsize[2] <= 7
+    
+    lastcolumn_mask = blockgetindex_mask(:, tailsize[2]+1:7)
+    for i in size(blocks,1)
+        @assert iszero(blocks[i,end].data & lastcolumn_mask)
+    end
+
+    lastrow_mask = blockgetindex_mask(tailsize[1]+1:7, :)
+    for i in size(blocks,2)
+        @assert iszero(blocks[end,i].data & lastrow_mask)
+    end
+end
+
+function Z2Matrix{B}(blocks::B, tailsize::Tuple{<:Integer,<:Integer}=(8,8)) where B<:AbstractMatrix{Z2Block}
+    tailsize = (Int(tailsize[1]), Int(tailsize[2]))
+    _check_z2matrix(blocks, tailsize)
+    return _Z2Matrix(blocks, tailsize)
+end
+Z2Matrix(blocks::AbstractMatrix{Z2Block}, tailsize::Tuple{<:Integer,<:Integer}=(7,7)) = Z2Matrix{typeof(blocks)}(blocks, tailsize)
+
+size(A::Z2Matrix) = (blocktailsize_to_size(size(A.blocks,1), A.tailsize[1]), blocktailsize_to_size(size(A.blocks,2), A.tailsize[2]))
+
+# Can specialize on matrix types with certain layouts
+function Z2Matrix(A::AbstractMatrix{<:Number})
     Base.require_one_based_indexing(A)
-    if (size(A, 1) > 8) || (size(A, 2) > 8)
-        throw(ArgumentError("Dimensions of Z2MatrixBlock cannot exceed 8x8. Got size=$(size(A))."))
+    blocksize = map(size_to_blocksize, size(A))
+    blocks = zeros(Z2Block, blocksize)
+    for ind in eachindex(IndexCartesian(), A)
+        blockind = map(size_to_blocksize, ind)
+        blocks[blockind...] = blocks[blockind...] + Z2Block(isodd(A[ind]) * blockgetindex_mask((ind[1]-1)%8, (ind[2]-1)%8))
     end
-    data = zero(UInt64)
-    for i in 1:size(A, 1)
-        for j in 1:size(A, 2)
-            data |= UInt64(Z2Number(A[i, j])) << ((i - 1) * 8 + (j - 1))
-        end
-    end
-    return unsafe_Z2MatrixBlock(data, size(A))
+    return _Z2Matrix(blocks, map(size_to_tailsize, size(A)))
 end
 
-size(M::Z2MatrixBlock) = M.size
+function Z2Matrix(::UndefInitializer, dims::Dims{2})
+    blocks = Matrix{Z2Block}(undef, map(size_to_blocksize, dims))
+    tailsize = map(size_to_tailsize, dims)
+    tailmask!(blocks, tailsize)
+    return _Z2Matrix(blocks, tailsize)
+end 
 
-@propagate_inbounds function getindex(M::Z2MatrixBlock, i::Integer, j::Integer)
+check_z2array_valid(M::Z2Matrix) = _check_z2matrix(M.blocks, M.tailsize)
+
+tailmask!(A::Z2Matrix) = tailmask!(A.blocks, A.tailsize)
+function tailmask!(blocks, tailsize)
+    for i in axes(blocks, 1)
+        blocks[i,end] = blocks[i,end][:,0:tailsize[2]]
+    end
+    for j in axes(blocks, 2)
+        blocks[end,j] = blocks[end,j][0:tailsize[1],:]
+    end
+end
+
+@propagate_inbounds function getindex(M::Z2Matrix, i::Integer, j::Integer)
     @boundscheck checkbounds(M, i, j)
-    return unsafe_getindex(M, i, j)
+    return M.blocks[cld(i,8), cld(j,8)][(i-1) % 8, (j-1) % 8]
 end
 
-unsafe_getindex(M::Z2MatrixBlock, i, j) = Z2Number(M.data >> ((i - 1) * 8 + (j - 1)))
+@propagate_inbounds function getindex(M::Z2Matrix, i::Integer, ::Colon)
+    @boundscheck checkbounds(M, i, :)
+    return _Z2RowVector(map(b -> b[(i-1) % 8, :], M.blocks[cld(i,8), :]), M.tailsize[2])
+end
 
-function ones(::Type{Z2Number}, dims::Dims{2})
-    if dims[1] > 8 || dims[2] > 8
-        throw(ArgumentError("Dimensions of Z2MatrixBlock cannot exceed 8x8. Got size=$(dims)."))
-    end
-    return unsafe_Z2MatrixBlock(blockones(dims...), dims)
+@propagate_inbounds function getindex(M::Z2Matrix, ::Colon, j::Integer)
+    @boundscheck checkbounds(M, :, j)
+    return _Z2ColVector(map(b -> b[:, (j-1) % 8], M.blocks[:, cld(j,8)]), M.tailsize[1])
+end
+
+@propagate_inbounds function setindex!(M::Z2Matrix, v::Z2Number, i::Integer, j::Integer)
+    @boundscheck checkbounds(M, i, j)
+    blocki = cld(i,8)
+    blockj = cld(j,8)
+    M.blocks[blocki, blockj] = setindex(M.blocks[blocki, blockj], v, (i-1) % 8, (j-1) % 8)
+end
+
+function similar(A::Z2Matrix, ::Type{Z2Number}, dims::Dims{2})
+    A = _Z2Matrix(similar(A.blocks, map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
+    tailmask!(A)
+    return A
+end
+copy_similar(A::Z2Matrix, ::Type{Z2Number}) = copymutable(A)
+copymutable(A::Z2Matrix) = _Z2Matrix(copymutable(A.blocks), A.tailsize)
+
+# not the most performant
+function one(A::Z2Matrix)
+    A.tailsize[1] == A.tailsize[2] || throw(DimensionMismatch("multiplicative identity defined only for square matrices"))
+    ret = _Z2Matrix(one(A.blocks), A.tailsize)
+    ts = A.tailsize[1]
+    ret.blocks[end,end] = ret.blocks[end,end][0:ts,0:ts]
+    return ret
+end
+
+rand(r::AbstractRNG, ::Type{Z2Number}, dims::Dims{2}) = rand!(r, Z2Matrix(undef, dims), Z2Number)
+
+function rand!(r::AbstractRNG, A::Z2Matrix, ::Type{Z2Number})
+    rand!(r, A.blocks)
+    tailmask!(A)
+    return A
 end

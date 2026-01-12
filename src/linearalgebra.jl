@@ -1,39 +1,96 @@
 import Base: +, -, *, /, \
-import LinearAlgebra: dot
+import LinearAlgebra: tr, lu!
 
-unsafe_add(u::Z2RowVecBlock, v::Z2RowVecBlock) = unsafe_Z2RowVecBlock(u.data ⊻ v.data, u.length)
-unsafe_add(u::Z2ColVecBlock, v::Z2ColVecBlock) = unsafe_Z2ColVecBlock(u.data ⊻ v.data, u.length)
-
-function +(u::Z2VectorBlock, v::Z2VectorBlock)
-    if u.length != v.length
-        throw(DimensionMismatch("Cannot add Z2RowVecBlocks of different lengths: $(u.length) and $(v.length)."))
-    end
-    unsafe_add(u, v)
+function +(A::Z2Matrix, B::Z2Matrix)
+    Base.promote_shape(A, B)
+    return _Z2Matrix(A.blocks + B.blocks, A.tailsize)
 end
 
--(u::Z2VectorBlock, v::Z2VectorBlock) = u + v
+-(A::Z2Matrix, B::Z2Matrix) = A + B
 
-unsafe_mul(a::Z2MatrixBlock, b::Z2MatrixBlock) = unsafe_Z2MatrixBlock(matmulmat(a.data, b.data), (a.size[1], b.size[2]))
-
-*(u::Z2ColVecBlock, v::Z2RowVecBlock) = unsafe_Z2MatrixBlock(colvecmulrowvec(u.data, v.data), (u.length, v.length))
-function *(a::Z2MatrixBlock, b::Z2MatrixBlock)
-    LinearAlgebra.matmul_size_check(size(a), size(b))
-    unsafe_mul(a, b)
+function *(A::Z2Matrix, B::Z2Matrix)
+    LinearAlgebra.matmul_size_check(size(A), size(B))
+    return _Z2Matrix(A.blocks * B.blocks, (A.tailsize[1], B.tailsize[2]))
 end
 
-dot(u::Z2RowVecBlock, v::Z2RowVecBlock) = Z2Number(rowvecdotrowvec(u.data, v.data))
-dot(u::Z2ColVecBlock, v::Z2ColVecBlock) = Z2Number(colvecdotcolvec(u.data, v.data))
+function tr(A::Z2Matrix)
+    A.tailsize[1] == A.tailsize[2] || throw(DimensionMismatch(lazy"matrix is not square: dimensions are $(size(A))"))
+    return tr(tr(A.blocks))
+end
 
-unsafe_ldiv(a::Z2MatrixBlock, b::Z2MatrixBlock) = Z2MatrixBlock(matldivmat(a.data, b.data), (a.size[2], b.size[2]))
+include("lu.jl")
 
-function \(a::Z2MatrixBlock, b::Z2MatrixBlock)
-    m, n = size(a)
-    if m != n
-        throw(DimensionMismatch("non-square divider is not supported"))
+function _find_first_nonzero_in_column(blocks, blockcol, col)
+    for blockrow in axes(blocks, 1)
+        row = trailing_zeros(blocks[blockrow, blockcol][:,col].data) ÷ 8
+        if row < 8
+            return (blockrow, row)
+        end
     end
-    if m != size(b, 1)
-        throw(DimensionMismatch("arguments must have the same number of rows"))
+    return (0, 0)
+end
+
+function _swap_pivot_row!(blocks, blockcol, col, blockrow, row)
+    # blockcol and col: column of the pivot, also destination of the swap.
+    # blockrow and row: row of the pivot, also source of the swap.
+    shift = 8(col - row)
+    maskdest = blockgetindex_mask(col, col:7)
+    masksrc = blockgetindex_mask(row, col:7)
+    if blockcol == blockrow # swap within one block
+        if iszero(shift)
+            return
+        end
+        blocks[blockcol, blockrow] = LUutils.blockswaprows(blocks[blockcol,blockrow], maskdest, masksrc, shift)
+
+        maskdest = blockgetindex_mask(col, :)
+        masksrc = blockgetindex_mask(row, :)
+        for _blockcol in blockcol+1:size(blocks,2)
+            blocks[blockcol,_blockcol] = LUutils.blockswaprows(blocks[blockcol,_blockcol], maskdest, masksrc, shift)
+        end
+    else # swap between two blocks
+        blocks[blockcol,blockcol], blocks[blockrow,blockcol] = LUutils.blockswaprows(blocks[blockcol,blockcol], blocks[blockrow,blockcol], maskdest, masksrc, shift)
+
+        maskdest = blockgetindex_mask(col, :)
+        masksrc = blockgetindex_mask(row, :)
+        for _blockcol in blockcol+1:size(blocks,2)
+            blocks[blockcol,_blockcol], blocks[blockrow,blockcol] = LUutils.blockswaprows(blocks[blockcol,_blockcol], blocks[blockrow,_blockcol], maskdest, masksrc, shift)
+        end
     end
-    a_pad = padidentity(a.data, m)
-    unsafe_ldiv(a_pad, b)
+end
+
+
+function lu!(A::Z2Matrix, pivot::Union{RowMaximum,NoPivot,RowNonZero} = RowNonZero(); check = true, allowsingular = false)
+    if pivot === NoPivot()
+        throw(ArgumentError("NoPivot() is currently not supported for Z2Matrix"))
+    end
+
+    ipiv = collect(1:8*size(A.blocks,1))
+    info = 0
+
+    colbuffer = Vector{UInt64}(undef, size(A.blocks,1))
+    for blockcol in axes(A.blocks, 2)
+        for col in 0:7
+            (blockrow, row) = LUutils.find_first_nonzero(A.blocks, blockcol, col)
+
+            if iszero(blockrow)
+                if iszero(info)
+                    info = blocktailsize_to_size(blockcol, col)
+                end
+                continue # no pivot in this column
+            end
+
+            LUutils.swaprows!(A.blocks, blockcol, col, blockrow, row)
+
+            ipiv[blocktailsize_to_size(blockcol, col)] = blocktailsize_to_size(blockrow, row)
+
+            LUutils.eliminate_rows_first!(A.blocks, blockcol, col, colbuffer)
+        end
+    end
+    if info > size(A,1)
+        info = 0
+    end
+    resize!(ipiv, size(A,1))
+    check && LinearAlgebra._check_lu_success(info, allowsingular)
+
+    return LU(A, ipiv, info)
 end

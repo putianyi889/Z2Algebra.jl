@@ -5,9 +5,11 @@ authors = ["Tianyi Pu <912396513@qq.com> and contributors"]
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
 LinearAlgebra = "1"
+Random = "1"
 julia = "1"
 
 [extras]

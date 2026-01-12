@@ -2,8 +2,9 @@
 # The least significant bit represents the top-left corner of the block.
 # The indexes are zero-based within the block.
 
-const ROW_MASK = UInt64(0xff)
-const COL_MASK = UInt64(0x0101010101010101)
+const ROW_MASK = 0x00000000000000ff
+const COL_MASK = 0x0101010101010101
+const DIAG_MASK = 0x8040201008040201
 
 """
     rowvecones(len::Integer)::UInt64
@@ -17,7 +18,7 @@ rowvecones(len::Integer) = ROW_MASK >> (8-len)
 
 Backend for `ones(Z2Number, len)` that yields a column vector. See also [`rowvecones`](@ref) and [`blockones`](@ref).
 """
-colvecones(len::Integer) = COL_MASK << 8(8-len)
+colvecones(len::Integer) = COL_MASK >> 8(8-len)
 
 """
     blockones(m::Integer, n::Integer)::UInt64
@@ -26,19 +27,47 @@ Backend for `ones(Z2Number, m, n)` that yields a block. See also [`rowvecones`](
 """
 blockones(m::Integer, n::Integer) = colvecones(m) * rowvecones(n)
 
-"""
-    getcolumn(x::UInt64, i::Integer)::UInt64
+blockgetindex_mask(i::Integer, j::Integer) = UInt64(0x01) << (8i + j)
+blockgetindex_mask(i::Integer, ::Colon) = ROW_MASK << 8i
+blockgetindex_mask(::Colon, j::Integer) = COL_MASK << j
+blockgetindex_mask(::Colon, ::Colon) = 0xffffffffffffffff
+blockgetindex_mask(i::Integer, j::AbstractUnitRange) = ROW_MASK >> (8 - length(j)) << (8i + first(j))
+blockgetindex_mask(i::AbstractUnitRange, j::Integer) = COL_MASK >> 8(8 - length(i)) << (8first(i) + j)
+blockgetindex_mask(::Colon, j::AbstractUnitRange) = (COL_MASK * rowvecones(length(j))) << first(j)
+blockgetindex_mask(i::AbstractUnitRange, ::Colon) = (ROW_MASK * colvecones(length(i))) << 8first(i)
+blockgetindex_mask(i::AbstractUnitRange, j::AbstractUnitRange) = blockones(length(i), length(j)) << (8first(i) + first(j))
 
-Returns the column at index `i` of the block `x`. The result is stored in the first column of the returned block.
-"""
-getcolumn(x::UInt64, i::Integer) = (x >> i) & COL_MASK
+blockgetindex_mask(::Colon, ::Val{p}) where p = blockgetindex_mask(:, p)
+blockgetindex_mask(::Val{p}, ::Colon) where p = blockgetindex_mask(p, :)
+blockgetindex_mask(::Val{p}, ::Val{q}) where {p,q} = blockgetindex_mask(p, q)
 
 """
-    getrow(x::UInt64, i::Integer)::UInt64
+    blockgetindex(x::UInt64, i, j)
 
-Returns the row at index `i` of the block `x`. The result is stored in the first row of the returned block.
+Get the bit(s) at **0-based** position (i, j) in the block.
 """
-getrow(x::UInt64, i::Integer) = (x >> 8i) & ROW_MASK
+@inline blockgetindex(x::UInt64, i::Integer, j::Integer) = (x >> (8i + j)) & UInt64(0x01)
+@inline blockgetindex(x::UInt64, i::Integer, ::Colon) = (x >> 8i) & ROW_MASK
+@inline blockgetindex(x::UInt64, ::Colon, j::Integer) = (x >> j) & COL_MASK
+@inline blockgetindex(x::UInt64, ::Colon, ::Colon) = x
+@inline blockgetindex(x::UInt64, i::Integer, j::AbstractUnitRange) = (x >> (8i + first(j))) & (ROW_MASK >> (8 - length(j)))
+@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::Integer) = (x >> j) & (COL_MASK >> (8 - length(i)))
+@inline blockgetindex(x::UInt64, ::Colon, j::AbstractUnitRange) = (x >> first(j)) & (COL_MASK * rowvecones(length(j)))
+@inline blockgetindex(x::UInt64, i::AbstractUnitRange, ::Colon) = (x >> 8first(i)) & (ROW_MASK * colvecones(length(i)))
+@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::AbstractUnitRange) = (x >> (8first(i) + first(j))) & blockones(length(i), length(j))
+
+rowgetindex(x::UInt64, i) = blockgetindex(x, 0, i)
+colgetindex(x::UInt64, i) = blockgetindex(x, i, 0)
+
+blocksetindex(x::UInt64, v::Bool, i::Integer, j::Integer) = x & ~blockgetindex_mask(i,j) | (v * blockgetindex_mask(i,j))
+
+rowsetindex(x::UInt64, v::Bool, i) = blocksetindex(x, v, 0, i)
+colsetindex(x::UInt64, v::Bool, i) = blocksetindex(x, v, i, 0)
+
+packrow(v::Vararg{Bool,8}) = UInt64(v[1]) | UInt64(v[2]) << 1 | UInt64(v[3]) << 2 | UInt64(v[4]) << 3 | UInt64(v[5]) << 4 | UInt64(v[6]) << 5 | UInt64(v[7]) << 6 | UInt64(v[8]) << 7
+packrow(v) = packrow(v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8])
+packcolumn(v::Vararg{Bool,8}) = UInt64(v[1]) | UInt64(v[2]) << 8 | UInt64(v[3]) << 16 | UInt64(v[4]) << 24 | UInt64(v[5]) << 32 | UInt64(v[6]) << 40 | UInt64(v[7]) << 48 | UInt64(v[8]) << 56
+packcolumn(v) = packcolumn(v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8])
 
 repeatcolumn(x::UInt64) = x * ROW_MASK
 
@@ -108,10 +137,18 @@ end
 rowvecdotrowvec(x::UInt64, y::UInt64) = isodd(count_ones(x & y))
 colvecdotcolvec(x::UInt64, y::UInt64) = isodd(count_ones(x & y))
 
-function swaprows(x::UInt64, i::Integer, j::Integer)
-    rowi = x & (ROW_MASK << 8i)
-    rowj = x & (ROW_MASK << 8j)
-    return x ⊻ rowi ⊻ rowj ⊻ (rowi >> ((i - j) * 8)) ⊻ (rowj << ((i - j) * 8))
+function blockswaprows(x::UInt64, i::Integer, j::Integer)
+    rowi = x & blockgetindex_mask(i,:)
+    rowj = x & blockgetindex_mask(j,:)
+    shift = 8(i-j)
+    return x ⊻ rowi ⊻ rowj ⊻ (rowi >> shift) ⊻ (rowj << shift)
+end
+
+function blockswaprows(x::UInt64, y::UInt64, i::Integer, j::Integer)
+    rowi = x & blockgetindex_mask(i,:)
+    rowj = y & blockgetindex_mask(j,:)
+    shift = 8(i-j)
+    return (x ⊻ rowi ⊻ (rowj << shift), y ⊻ rowj ⊻ (rowi >> shift))
 end
 
 """
@@ -121,8 +158,8 @@ Multiplies two blocks.
 """
 function matmulmat(x::UInt64, y::UInt64)
     function slice(x::UInt64, y::UInt64, i)
-        x = getcolumn(x, i)
-        y = getrow(y, i)
+        x = blockgetindex(x, :, i)
+        y = blockgetindex(y, i, :)
         return colvecmulrowvec(x, y)
     end
     return slice(x, y, 0) ⊻ slice(x, y, 1) ⊻ slice(x, y, 2) ⊻ slice(x, y, 3) ⊻ slice(x, y, 4) ⊻ slice(x, y, 5) ⊻ slice(x, y, 6) ⊻ slice(x, y, 7)
@@ -143,11 +180,11 @@ function matldivmat(x::UInt64, y::UInt64)
         col = x & colmask(Val(p)) & (0xffffffffffffffff << 8p)
         iszero(col) && throw(SingularException(p))
         k = trailing_zeros(col)
-        x = swaprows(x, p, k ÷ 8)
-        y = swaprows(y, p, k ÷ 8)
+        x = blockswaprows(x, p, k ÷ 8)
+        y = blockswaprows(y, p, k ÷ 8)
         col = repeatcolpartial(x & colmaskexclude(Val(p)), Val(p))
-        xrow = repeatrow(getrow(x, p))
-        yrow = repeatrow(getrow(y, p))
+        xrow = repeatrow(blockgetindex(x, p, :))
+        yrow = repeatrow(blockgetindex(y, p, :))
         x ⊻= col & xrow
         y ⊻= col & yrow
         return x, y
@@ -170,7 +207,7 @@ function matrank(x::UInt64)
         col = x & (COL_MASK << p)
         rk += !iszero(col)
         k = trailing_zeros(col) ÷ 8
-        x = x ⊻ (col *)
+        # x = x ⊻ (col *)
     end
 
     dostep(Val(0))
@@ -193,3 +230,5 @@ end
 Assuming `x` is a square block, pad an identity matrix to the bottomright to form an 8x8 block. `p` is the size of `x`.
 """
 padidentity(x::UInt64, p) = x | (0x8040201008040201 << 9p)
+
+blocktrace(x::UInt64) = isodd(count_ones(x & DIAG_MASK))

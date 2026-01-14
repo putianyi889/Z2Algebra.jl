@@ -1,5 +1,7 @@
 import Base: +, -, *, /, \
-import LinearAlgebra: tr, lu!
+import LinearAlgebra: tr, lu!, copytrito!, triu!, tril!
+using LinearAlgebra.LAPACK
+using LinearAlgebra.BLAS
 
 function +(A::Z2Matrix, B::Z2Matrix)
     Base.promote_shape(A, B)
@@ -20,77 +22,59 @@ end
 
 include("lu.jl")
 
-function _find_first_nonzero_in_column(blocks, blockcol, col)
-    for blockrow in axes(blocks, 1)
-        row = trailing_zeros(blocks[blockrow, blockcol][:,col].data) ÷ 8
-        if row < 8
-            return (blockrow, row)
-        end
-    end
-    return (0, 0)
-end
-
-function _swap_pivot_row!(blocks, blockcol, col, blockrow, row)
-    # blockcol and col: column of the pivot, also destination of the swap.
-    # blockrow and row: row of the pivot, also source of the swap.
-    shift = 8(col - row)
-    maskdest = blockgetindex_mask(col, col:7)
-    masksrc = blockgetindex_mask(row, col:7)
-    if blockcol == blockrow # swap within one block
-        if iszero(shift)
-            return
-        end
-        blocks[blockcol, blockrow] = LUutils.blockswaprows(blocks[blockcol,blockrow], maskdest, masksrc, shift)
-
-        maskdest = blockgetindex_mask(col, :)
-        masksrc = blockgetindex_mask(row, :)
-        for _blockcol in blockcol+1:size(blocks,2)
-            blocks[blockcol,_blockcol] = LUutils.blockswaprows(blocks[blockcol,_blockcol], maskdest, masksrc, shift)
-        end
-    else # swap between two blocks
-        blocks[blockcol,blockcol], blocks[blockrow,blockcol] = LUutils.blockswaprows(blocks[blockcol,blockcol], blocks[blockrow,blockcol], maskdest, masksrc, shift)
-
-        maskdest = blockgetindex_mask(col, :)
-        masksrc = blockgetindex_mask(row, :)
-        for _blockcol in blockcol+1:size(blocks,2)
-            blocks[blockcol,_blockcol], blocks[blockrow,blockcol] = LUutils.blockswaprows(blocks[blockcol,_blockcol], blocks[blockrow,_blockcol], maskdest, masksrc, shift)
-        end
-    end
-end
-
-
-function lu!(A::Z2Matrix, pivot::Union{RowMaximum,NoPivot,RowNonZero} = RowNonZero(); check = true, allowsingular = false)
-    if pivot === NoPivot()
-        throw(ArgumentError("NoPivot() is currently not supported for Z2Matrix"))
-    end
-
-    ipiv = collect(1:8*size(A.blocks,1))
-    info = 0
-
-    colbuffer = Vector{UInt64}(undef, size(A.blocks,1))
-    for blockcol in axes(A.blocks, 2)
-        for col in 0:7
-            (blockrow, row) = LUutils.find_first_nonzero(A.blocks, blockcol, col)
-
-            if iszero(blockrow)
-                if iszero(info)
-                    info = blocktailsize_to_size(blockcol, col)
-                end
-                continue # no pivot in this column
+function copytrito!(B::Z2Matrix, A::Z2Matrix, uplo::AbstractChar)
+    BLAS.chkuplo(uplo)
+    m,n = size(A)
+    bm, bn = size(A.blocks)
+    bd = min(bm, bn)
+    A = Base.unalias(B, A)
+    if uplo == 'U'
+        LAPACK.lacpy_size_check(size(B), (n < m ? n : m, n))
+        blockB, blockA = LinearAlgebra.uppertridata(B.blocks), LinearAlgebra.uppertridata(A.blocks)
+        for j in 1:bd
+            for i in Base.oneto(j-1)
+                blockB[i,j] = blockA[i,j]
             end
-
-            LUutils.swaprows!(A.blocks, blockcol, col, blockrow, row)
-
-            ipiv[blocktailsize_to_size(blockcol, col)] = blocktailsize_to_size(blockrow, row)
-
-            LUutils.eliminate_rows_first!(A.blocks, blockcol, col, colbuffer)
+            blockB[j,j] = triu(blockA[j,j])
+        end
+        for j in bd+1:bn
+            for i in 1:bm
+                blockB[i,j] = blockA[i,j]
+            end
+        end
+    else # uplo == 'L'
+        LAPACK.lacpy_size_check(size(B), (m, m < n ? m : n))
+        blockB, blockA = LinearAlgebra.lowertridata(B.blocks), LinearAlgebra.lowertridata(A.blocks)
+        for j in 1:bd
+            blockB[j,j] = tril(blockA[j,j])
+            for i in j+1:bm
+                blockB[i,j] = blockA[i,j]
+            end
         end
     end
-    if info > size(A,1)
-        info = 0
-    end
-    resize!(ipiv, size(A,1))
-    check && LinearAlgebra._check_lu_success(info, allowsingular)
+    return B
+end
 
-    return LU(A, ipiv, info)
+function triu!(M::Z2Matrix, k::Integer)
+    dl, kl = fldmod(k, 8)
+    triu!(M.blocks, dl)
+    for i in diagind(M.blocks, dl)
+        M.blocks[i] = triu(M.blocks[i], kl)
+    end
+    for i in diagind(M.blocks, dl+1)
+        M.blocks[i] = triu(M.blocks[i], kl-8)
+    end
+    return M
+end
+
+function tril!(M::Z2Matrix, k::Integer)
+    dl, kl = fldmod(k, 8)
+    tril!(M.blocks, dl)
+    for i in diagind(M.blocks, dl)
+        M.blocks[i] = tril(M.blocks[i], kl)
+    end
+    for i in diagind(M.blocks, dl+1)
+        M.blocks[i] = tril(M.blocks[i], kl-8)
+    end
+    return M
 end

@@ -39,7 +39,7 @@ function Z2Matrix(A::AbstractMatrix{<:Number})
     blocksize = map(size_to_blocksize, size(A))
     blocks = zeros(Z2Block, blocksize)
     for ind in eachindex(IndexCartesian(), A)
-        blockind = map(size_to_blocksize, ind)
+        blockind = map(size_to_blocksize, ind.I)
         blocks[blockind...] = blocks[blockind...] + Z2Block(isodd(A[ind]) * blockgetindex_mask((ind[1]-1)%8, (ind[2]-1)%8))
     end
     return _Z2Matrix(blocks, map(size_to_tailsize, size(A)))

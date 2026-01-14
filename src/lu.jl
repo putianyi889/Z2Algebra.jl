@@ -59,64 +59,89 @@ function swaprows!(blocks, blockcol, col, blockrow, row)
         if iszero(shift)
             return
         end
-        for _blockcol in axes(blocks,2)
+        @inbounds for _blockcol in axes(blocks,2)
             blocks[blockcol,_blockcol] = blockswaprows(blocks[blockcol,_blockcol], maskdest, masksrc, shift)
         end
     else # swap between two blocks
-        for _blockcol in axes(blocks,2)
+        @inbounds for _blockcol in axes(blocks,2)
             blocks[blockcol,_blockcol], blocks[blockrow,_blockcol] = blockswaprows(blocks[blockcol,_blockcol], blocks[blockrow,_blockcol], maskdest, masksrc, shift)
         end
     end
 end
 
 """
-    eliminaterows!(blocks, blockpivot, pivot)
+    eliminate_rows!(blocks::AbstractMatrix{Z2Block}, blockpivot, pivot, colbuffer::AbstractVector{UInt64})
 
-For the pivot with index `(blockpivot, pivot)`, do elimination in its own block, blocks to the right and below it. Other blocks to the bottom-right are bulk-updated by [`eliminate_rows_block!`](@ref) later.
+For the pivot with index `(blockpivot, pivot)`, do a round of row elimination. `colbuffer` is pre-allocated to reduce allocation overhead, and its length should be at least `size(blocks,1)`.
 """
-function eliminate_rows_first!(blocks, blockpivot, col, colbuffer)
+function eliminate_rows!(blocks::AbstractMatrix{Z2Block}, blockpivot, pivot, colbuffer::AbstractVector{UInt64})
     pivot_block = blocks[blockpivot, blockpivot].data
-    pivot_rowvalue = (pivot_block >> 8col) & blockgetindex_mask(0, col+1:7)
-    pivot_colvalue = (pivot_block >> col) & blockgetindex_mask(col+1:7, 0)
+    pivot_rowvalue = (pivot_block >> unsigned(8pivot)) & blockgetindex_mask(0, pivot+1:7)
+    pivot_colvalue = (pivot_block >> unsigned(pivot)) & blockgetindex_mask(pivot+1:7, 0)
 
     # pivot block
     blocks[blockpivot, blockpivot] = Z2Block(pivot_block ⊻ (pivot_colvalue * pivot_rowvalue))
 
     # blocks to the right
-    for blockcol in blockpivot+1:size(blocks,2)
+    @inbounds for blockcol in blockpivot+1:size(blocks,2)
         block = blocks[blockpivot, blockcol].data
-        rowvalue = blockgetindex(block, col, :)
+        rowvalue = blockgetindex(block, pivot, :)
         blocks[blockpivot, blockcol] = Z2Block(block ⊻ (pivot_colvalue * rowvalue))
     end
 
     # blocks to the bottom
-    for blockrow in blockpivot+1:size(blocks,1)
+    @inbounds for blockrow in blockpivot+1:size(blocks,1)
         block = blocks[blockrow, blockpivot].data
-        colvalue = blockgetindex(block, :, col)
+        colvalue = blockgetindex(block, :, pivot)
         colbuffer[blockrow] = colvalue
         blocks[blockrow, blockpivot] = Z2Block(block ⊻ (colvalue * pivot_rowvalue))
     end
 
     # blocks to the bottom-right
-    for blockcol in blockpivot+1:size(blocks,2)
-        rowvalue = blockgetindex(blocks[blockpivot, blockcol].data, col, :)
+    @inbounds for blockcol in blockpivot+1:size(blocks,2)
+        rowvalue = blockgetindex(blocks[blockpivot, blockcol].data, pivot, :)
         for blockrow in blockpivot+1:size(blocks,1)
-            @inbounds blocks[blockrow, blockcol] = Z2Block(blocks[blockrow, blockcol].data ⊻ (rowvalue * colbuffer[blockrow]))
+            block = blocks[blockrow, blockcol].data
+            colvalue = colbuffer[blockrow]
+            blocks[blockrow, blockcol] = Z2Block(block ⊻ (rowvalue * colvalue))
         end
     end     
 end
 
-"""
-    eliminate_rows_block!(blocks, blockrow)
+end # module
 
-Eliminate blocks below `blockrow` in the LU process. This basically packs 8 row eliminations at once.
-"""
-function eliminate_rows_block!(blocks, blockpivot)
-    for blockcol in blockpivot+1:size(blocks,2)
-        for blockrow in blockpivot+1:size(blocks,1)
-            blocks[blockrow, blockcol] = blocks[blockrow, blockcol] + blocks[blockrow, blockpivot] * blocks[blockpivot, blockcol]
+function lu!(A::Z2Matrix, pivot::Union{RowMaximum,NoPivot,RowNonZero} = RowNonZero(); check = true, allowsingular = false)
+    if pivot === NoPivot()
+        throw(ArgumentError("NoPivot() is currently not supported for Z2Matrix"))
+    end
+
+    ipiv = collect(1:8*size(A.blocks,1))
+    info = 0
+
+    colbuffer = Vector{UInt64}(undef, size(A.blocks,1))
+    for blockcol in Base.oneto(min(size(A.blocks)...))
+        for col in 0:7
+            (blockrow, row) = LUutils.find_first_nonzero(A.blocks, blockcol, col)
+
+            if iszero(blockrow)
+                if iszero(info)
+                    info = blocktailsize_to_size(blockcol, col)
+                end
+                continue # no pivot in this column
+            end
+
+            LUutils.swaprows!(A.blocks, blockcol, col, blockrow, row)
+
+            ipiv[blocktailsize_to_size(blockcol, col)] = blocktailsize_to_size(blockrow, row)
+
+            LUutils.eliminate_rows!(A.blocks, blockcol, col, colbuffer)
         end
     end
-end
+    if info > size(A,1)
+        info = 0
+    end
+    resize!(ipiv, size(A,1))
+    check && LinearAlgebra._check_lu_success(info, allowsingular)
 
-end # module
+    return LU(A, ipiv, info)
+end

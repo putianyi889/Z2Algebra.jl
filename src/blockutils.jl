@@ -5,6 +5,31 @@
 const ROW_MASK = 0x00000000000000ff
 const COL_MASK = 0x0101010101010101
 const DIAG_MASK = 0x8040201008040201
+const TRIU_MASK = 0x80c0e0f0f8fcfeff
+const TRIL_MASK = 0xff7f3f1f0f070301
+
+"""
+    bitstringblock(x::Union{UInt64, Int64})
+
+Convert a 64-bit integer to a block of bits in a human-readable format.
+
+# Example
+```jldoctest
+julia> bitstringblock(TRIU_MASK) |> print
+11111111
+01111111
+00111111
+00011111
+00001111
+00000111
+00000011
+00000001
+```
+"""
+function bitstringblock(x::Union{UInt64, Int64})
+    str = bitstring(bitreverse(x))
+    join((str[i:i+7] for i in 1:8:64), '\n')
+end
 
 """
     rowvecones(len::Integer)::UInt64
@@ -27,15 +52,23 @@ Backend for `ones(Z2Number, m, n)` that yields a block. See also [`rowvecones`](
 """
 blockones(m::Integer, n::Integer) = colvecones(m) * rowvecones(n)
 
-blockgetindex_mask(i::Integer, j::Integer) = UInt64(0x01) << (8i + j)
-blockgetindex_mask(i::Integer, ::Colon) = ROW_MASK << 8i
-blockgetindex_mask(::Colon, j::Integer) = COL_MASK << j
+"""
+    blockgetindex_mask(i, j)
+
+Get the mask where the bit(s) at **0-based** position (i, j) in are 1. This function is low-level, and the caller is responsible for bounds checking.
+
+!!! note
+    Unlike [`blockgetindex`](@ref), this function does not shift bits to the least significant position.
+"""
+blockgetindex_mask(i::Integer, j::Integer) = UInt64(0x01) << unsigned(8i + j)
+blockgetindex_mask(i::Integer, ::Colon) = ROW_MASK << unsigned(8i)
+blockgetindex_mask(::Colon, j::Integer) = COL_MASK << unsigned(j)
 blockgetindex_mask(::Colon, ::Colon) = 0xffffffffffffffff
-blockgetindex_mask(i::Integer, j::AbstractUnitRange) = ROW_MASK >> (8 - length(j)) << (8i + first(j))
-blockgetindex_mask(i::AbstractUnitRange, j::Integer) = COL_MASK >> 8(8 - length(i)) << (8first(i) + j)
-blockgetindex_mask(::Colon, j::AbstractUnitRange) = (COL_MASK * rowvecones(length(j))) << first(j)
-blockgetindex_mask(i::AbstractUnitRange, ::Colon) = (ROW_MASK * colvecones(length(i))) << 8first(i)
-blockgetindex_mask(i::AbstractUnitRange, j::AbstractUnitRange) = blockones(length(i), length(j)) << (8first(i) + first(j))
+blockgetindex_mask(i::Integer, j::AbstractUnitRange) = ROW_MASK >> unsigned(8 - length(j)) << unsigned(8i + first(j))
+blockgetindex_mask(i::AbstractUnitRange, j::Integer) = COL_MASK >> unsigned(8(8 - length(i))) << unsigned(8first(i) + j)
+blockgetindex_mask(::Colon, j::AbstractUnitRange) = (COL_MASK * rowvecones(length(j))) << unsigned(first(j))
+blockgetindex_mask(i::AbstractUnitRange, ::Colon) = (ROW_MASK * colvecones(length(i))) << unsigned(8first(i))
+blockgetindex_mask(i::AbstractUnitRange, j::AbstractUnitRange) = blockones(length(i), length(j)) << unsigned(8first(i) + first(j))
 
 blockgetindex_mask(::Colon, ::Val{p}) where p = blockgetindex_mask(:, p)
 blockgetindex_mask(::Val{p}, ::Colon) where p = blockgetindex_mask(p, :)
@@ -44,17 +77,20 @@ blockgetindex_mask(::Val{p}, ::Val{q}) where {p,q} = blockgetindex_mask(p, q)
 """
     blockgetindex(x::UInt64, i, j)
 
-Get the bit(s) at **0-based** position (i, j) in the block.
+Get the bit(s) at **0-based** position (i, j) in the block. This function is low-level, and the caller is responsible for bounds checking.
+
+!!! note
+    Unlike [`blockgetindex_mask`](@ref), this function shifts bits to the least significant position.
 """
-@inline blockgetindex(x::UInt64, i::Integer, j::Integer) = (x >> (8i + j)) & UInt64(0x01)
-@inline blockgetindex(x::UInt64, i::Integer, ::Colon) = (x >> 8i) & ROW_MASK
-@inline blockgetindex(x::UInt64, ::Colon, j::Integer) = (x >> j) & COL_MASK
+@inline blockgetindex(x::UInt64, i::Integer, j::Integer) = (x >> unsigned(8i + j)) & UInt64(0x01)
+@inline blockgetindex(x::UInt64, i::Integer, ::Colon) = (x >> unsigned(8i)) & ROW_MASK
+@inline blockgetindex(x::UInt64, ::Colon, j::Integer) = (x >> unsigned(j)) & COL_MASK
 @inline blockgetindex(x::UInt64, ::Colon, ::Colon) = x
-@inline blockgetindex(x::UInt64, i::Integer, j::AbstractUnitRange) = (x >> (8i + first(j))) & (ROW_MASK >> (8 - length(j)))
-@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::Integer) = (x >> j) & (COL_MASK >> (8 - length(i)))
-@inline blockgetindex(x::UInt64, ::Colon, j::AbstractUnitRange) = (x >> first(j)) & (COL_MASK * rowvecones(length(j)))
-@inline blockgetindex(x::UInt64, i::AbstractUnitRange, ::Colon) = (x >> 8first(i)) & (ROW_MASK * colvecones(length(i)))
-@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::AbstractUnitRange) = (x >> (8first(i) + first(j))) & blockones(length(i), length(j))
+@inline blockgetindex(x::UInt64, i::Integer, j::AbstractUnitRange) = (x >> unsigned(8i + first(j))) & (ROW_MASK >> unsigned(8 - length(j)))
+@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::Integer) = (x >> unsigned(j)) & (COL_MASK >> unsigned(8 - length(i)))
+@inline blockgetindex(x::UInt64, ::Colon, j::AbstractUnitRange) = (x >> unsigned(first(j))) & (COL_MASK * rowvecones(length(j)))
+@inline blockgetindex(x::UInt64, i::AbstractUnitRange, ::Colon) = (x >> unsigned(8first(i))) & (ROW_MASK * colvecones(length(i)))
+@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::AbstractUnitRange) = (x >> unsigned(8first(i) + first(j))) & blockones(length(i), length(j))
 
 rowgetindex(x::UInt64, i) = blockgetindex(x, 0, i)
 colgetindex(x::UInt64, i) = blockgetindex(x, i, 0)
@@ -63,6 +99,10 @@ blocksetindex(x::UInt64, v::Bool, i::Integer, j::Integer) = x & ~blockgetindex_m
 
 rowsetindex(x::UInt64, v::Bool, i) = blocksetindex(x, v, 0, i)
 colsetindex(x::UInt64, v::Bool, i) = blocksetindex(x, v, i, 0)
+
+tril_mask(k::Integer) = unsigned(signed(TRIL_MASK) >> 8k)
+triu_mask(k::Integer) = ~tril_mask(k-one(k))
+triu_mask(k::Unsigned) = TRIU_MASK >> 8k
 
 packrow(v::Vararg{Bool,8}) = UInt64(v[1]) | UInt64(v[2]) << 1 | UInt64(v[3]) << 2 | UInt64(v[4]) << 3 | UInt64(v[5]) << 4 | UInt64(v[6]) << 5 | UInt64(v[7]) << 6 | UInt64(v[8]) << 7
 packrow(v) = packrow(v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8])

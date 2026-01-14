@@ -1,7 +1,7 @@
 import Base: +, -, *
 import Base: getindex, isbitstype, eltype, iszero, isone, zero, one, size, axes
 import Random: rand
-import LinearAlgebra: Matrix, tr
+import LinearAlgebra: Matrix, tr, triu, tril
 
 struct Z2Block
     data::UInt64
@@ -37,3 +37,9 @@ setindex(a::Z2Block, v::Z2Number, i::Integer, j::Integer) = Z2Block(blocksetinde
 rand(rng::Random.AbstractRNG, ::Random.SamplerType{Z2Block}) = Z2Block(rand(rng, Random.SamplerType{UInt64}()))
 
 tr(a::Z2Block) = Z2Number(blocktrace(a.data))
+
+triu(a::Z2Block) = Z2Block(a.data & TRIU_MASK)
+tril(a::Z2Block) = Z2Block(a.data & TRIL_MASK)
+
+triu(a::Z2Block, k::Integer) = Z2Block(a.data & triu_mask(k))
+tril(a::Z2Block, k::Integer) = Z2Block(a.data & tril_mask(k))

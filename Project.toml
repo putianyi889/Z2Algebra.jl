@@ -1,6 +1,6 @@
 name = "Z2Algebra"
 uuid = "fff55359-a81b-4d83-b0e7-1c8be1053a6b"
-version = "1.0.0-DEV"
+version = "0.0.1"
 authors = ["Tianyi Pu <912396513@qq.com> and contributors"]
 
 [deps]

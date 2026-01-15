@@ -1,4 +1,4 @@
-import Base: size, getindex, isbitstype, one, similar, copymutable
+import Base: size, getindex, isbitstype, one, similar, copymutable, zeros, ones
 import LinearAlgebra: norm, copy_similar
 import Random: rand, rand!
 
@@ -50,19 +50,12 @@ function Z2Matrix(::UndefInitializer, dims::Dims{2})
     tailsize = map(size_to_tailsize, dims)
     tailmask!(blocks, tailsize)
     return _Z2Matrix(blocks, tailsize)
-end 
+end
+Z2Matrix(::UndefInitializer, m::Integer, n::Integer) = Z2Matrix(undef, (m,n))
 
 check_z2array_valid(M::Z2Matrix) = _check_z2matrix(M.blocks, M.tailsize)
 
 tailmask!(A::Z2Matrix) = tailmask!(A.blocks, A.tailsize)
-function tailmask!(blocks, tailsize)
-    for i in axes(blocks, 1)
-        blocks[i,end] = blocks[i,end][:,0:tailsize[2]]
-    end
-    for j in axes(blocks, 2)
-        blocks[end,j] = blocks[end,j][0:tailsize[1],:]
-    end
-end
 
 @propagate_inbounds function getindex(M::Z2Matrix, i::Integer, j::Integer)
     @boundscheck checkbounds(M, i, j)
@@ -101,6 +94,13 @@ function one(A::Z2Matrix)
     ts = A.tailsize[1]
     ret.blocks[end,end] = ret.blocks[end,end][0:ts,0:ts]
     return ret
+end
+
+zeros(::Type{Z2Number}, dims::Dims{2}) = _Z2Matrix(zeros(Z2Block, map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
+function ones(::Type{Z2Number}, dims::Dims{2})
+    A = _Z2Matrix(fill(Z2Block(FULL_MASK), map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
+    tailmask!(A)
+    return A
 end
 
 rand(r::AbstractRNG, ::Type{Z2Number}, dims::Dims{2}) = rand!(r, Z2Matrix(undef, dims), Z2Number)

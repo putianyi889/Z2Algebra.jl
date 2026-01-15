@@ -73,6 +73,8 @@ end
 |`size`|✅|✅|✅|
 |`similar`|✅|❌|❌|
 |`copymutable`, `copy`|✅|❌|❌|
+|`zeros`|✅|❌|❌|
+|`ones`|✅|❌|❌|
 
 ## Specialized linear algebra routines
 While Julia's generic routines can already handle linear algebra with `Z2Number` provided, they are not optimized for `Z2Matrix` and `Z2Vector` layouts. Here list some routines that have been specialized.

@@ -2,6 +2,7 @@
 # The least significant bit represents the top-left corner of the block.
 # The indexes are zero-based within the block.
 
+const FULL_MASK = 0xffffffffffffffff
 const ROW_MASK = 0x00000000000000ff
 const COL_MASK = 0x0101010101010101
 const DIAG_MASK = 0x8040201008040201
@@ -204,6 +205,20 @@ function matmulmat(x::UInt64, y::UInt64)
     end
     return slice(x, y, 0) ⊻ slice(x, y, 1) ⊻ slice(x, y, 2) ⊻ slice(x, y, 3) ⊻ slice(x, y, 4) ⊻ slice(x, y, 5) ⊻ slice(x, y, 6) ⊻ slice(x, y, 7)
 end
+
+"""
+    matmulrowvec(x::UInt64, y::UInt64)::UInt64
+
+Multiplies a block by a row vector.
+"""
+matmulrowvec(x::UInt64, y::UInt64) = (x & y) ⊻ ((x>>8) & y) ⊻ ((x>>16) & y) ⊻ ((x>>24) & y) ⊻ ((x>>32) & y) ⊻ ((x>>40) & y) ⊻ ((x>>48) & y) ⊻ ((x>>56) & y)
+
+"""
+    matmulcolvec(x::UInt64, y::UInt64)::UInt64
+
+Multiplies a block by a column vector.
+"""
+matmulcolvec(x::UInt64, y::UInt64) = matmulmat(x, y)
 
 """
     matldivmat(x::UInt64, y::UInt64)::UInt64

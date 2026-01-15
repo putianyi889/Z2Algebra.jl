@@ -85,6 +85,25 @@ end
     end
 end
 
+@testset "arrays interface" begin
+    @testset "undef constructor" begin
+        A = Z2Matrix(undef, 13, 19)
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test size(A) ≡ (13, 19)
+        @test Z2Algebra.check_z2array_valid(A) isa Any
+
+        u = Z2ColVector(undef, 13)
+        @test u isa Z2ColVector{Vector{Z2Block}}
+        @test size(u) ≡ (13,)
+        @test Z2Algebra.check_z2array_valid(u) isa Any
+
+        v = Z2RowVector(undef, 19)
+        @test v isa Z2RowVector{Vector{Z2Block}}
+        @test size(v) ≡ (19,)
+        @test Z2Algebra.check_z2array_valid(v) isa Any
+    end
+end
+
 @testset "matrix" begin
     @testset "basics" begin
         data = rand(Bool, 10, 10)
@@ -100,6 +119,9 @@ end
 
         @test zero(A) isa Z2Matrix{Matrix{Z2Block}}
         @test zero(A) == zero(MA)
+
+        @test zeros(Z2Number,10,10) isa Z2Matrix{Matrix{Z2Block}}
+        @test zeros(Z2Number,10,10) == zero(A)
     end
 
     @testset "triu and tril" begin

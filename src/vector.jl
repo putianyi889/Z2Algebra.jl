@@ -31,23 +31,23 @@ end
 
 function Z2RowVector(v::AbstractVector)
     Base.require_one_based_indexing(v)
-    blocks = zeros(UInt64, size_to_blocksize(length(v)))
+    blocks = zeros(Z2Block, size_to_blocksize(length(v)))
     tailsize = size_to_tailsize(length(v))
     for i in 1:length(blocks)-1
-        blocks[i] = packrow((isodd(v[8i+k]) for k in -7:0)...)
+        blocks[i] = Z2Block(packrow((isodd(v[8i+k]) for k in -7:0)...))
     end
-    blocks[end] = packrow((isodd(v[end+k]) for k in -tailsize:0)..., zeros(Bool, 7-tailsize)...)
+    blocks[end] = Z2Block(packrow((isodd(v[end+k]) for k in -tailsize:0)..., zeros(Bool, 7-tailsize)...))
     return _Z2RowVector(blocks, tailsize)
 end
 
 function Z2ColVector(v::AbstractVector)
     Base.require_one_based_indexing(v)
-    blocks = zeros(UInt64, size_to_blocksize(length(v)))
+    blocks = zeros(Z2Block, size_to_blocksize(length(v)))
     tailsize = size_to_tailsize(length(v))
     for i in 1:length(blocks)-1
-        blocks[i] = packcolumn((isodd(v[8i+k]) for k in -7:0)...)
+        blocks[i] = Z2Block(packcolumn((isodd(v[8i+k]) for k in -7:0)...))
     end
-    blocks[end] = packcolumn((isodd(v[end+k]) for k in -tailsize:0)..., zeros(Bool, 7-tailsize)...)
+    blocks[end] = Z2Block(packcolumn((isodd(v[end+k]) for k in -tailsize:0)..., zeros(Bool, 7-tailsize)...))
     return _Z2ColVector(blocks, tailsize)
 end
 

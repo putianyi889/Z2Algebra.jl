@@ -86,7 +86,24 @@ end
 end
 
 @testset "arrays interface" begin
-    @testset "undef constructor" begin
+    @testset "undef constructor (Tuple dims)" begin
+        A = Z2Matrix(undef, (13, 19))
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test size(A) ≡ (13, 19)
+        @test Z2Algebra.check_z2array_valid(A) isa Any
+
+        u = Z2ColVector(undef, (13,))
+        @test u isa Z2ColVector{Vector{Z2Block}}
+        @test size(u) ≡ (13,)
+        @test Z2Algebra.check_z2array_valid(u) isa Any
+
+        v = Z2RowVector(undef, (19,))
+        @test v isa Z2RowVector{Vector{Z2Block}}
+        @test size(v) ≡ (19,)
+        @test Z2Algebra.check_z2array_valid(v) isa Any
+    end
+
+    @testset "undef constructor (Vararg dims)" begin
         A = Z2Matrix(undef, 13, 19)
         @test A isa Z2Matrix{Matrix{Z2Block}}
         @test size(A) ≡ (13, 19)
@@ -101,6 +118,97 @@ end
         @test v isa Z2RowVector{Vector{Z2Block}}
         @test size(v) ≡ (19,)
         @test Z2Algebra.check_z2array_valid(v) isa Any
+    end
+
+    @testset "rand constructor (Tuple dims)" begin
+        A = rand(Z2Number, (13, 19))
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test size(A) ≡ (13, 19)
+        @test Z2Algebra.check_z2array_valid(A) isa Any
+
+        v = rand(Z2Number, (13,))
+        @test v isa Z2RowVector{Vector{Z2Block}}
+        @test size(v) ≡ (13,)
+        @test Z2Algebra.check_z2array_valid(v) isa Any
+    end
+
+    @testset "rand constructor (Vararg dims)" begin
+        A = rand(Z2Number, 13, 19)
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test size(A) ≡ (13, 19)
+        @test Z2Algebra.check_z2array_valid(A) isa Any
+
+        v = rand(Z2Number, 13)
+        @test v isa Z2RowVector{Vector{Z2Block}}
+        @test size(v) ≡ (13,)
+        @test Z2Algebra.check_z2array_valid(v) isa Any
+    end
+
+    @testset "construct from array" begin
+        M = rand(Bool, 13, 19)
+        A = Z2Matrix(M)
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test A == M
+
+        V = rand(Bool, 13)
+        u = Z2ColVector(V)
+        v = Z2RowVector(V)
+        @test u isa Z2ColVector{Vector{Z2Block}}
+        @test v isa Z2RowVector{Vector{Z2Block}}
+        @test u == V == v
+    end
+
+    @testset "ones (Tuple dims)" begin
+        A = ones(Z2Number, (13, 19))
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test A == ones(Bool, 13, 19)
+
+        v = ones(Z2Number, (13,))
+        @test v isa Vector{Z2Number}
+        @test v == ones(Bool, 13)
+    end
+
+    @testset "ones (Vararg dims)" begin
+        A = ones(Z2Number, 13, 19)
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test A == ones(Bool, 13, 19)
+
+        v = ones(Z2Number, 13)
+        @test v isa Vector{Z2Number}
+        @test v == ones(Bool, 13)
+    end
+
+    @testset "zeros (Tuple dims)" begin
+        A = zeros(Z2Number, (13, 19))
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test A == zeros(Bool, 13, 19)
+
+        v = zeros(Z2Number, (13,))
+        @test v isa Vector{Z2Number}
+        @test v == zeros(Bool, 13)
+    end
+
+    @testset "zeros (Vararg dims)" begin
+        A = zeros(Z2Number, 13, 19)
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test A == zeros(Bool, 13, 19)
+
+        v = zeros(Z2Number, 13)
+        @test v isa Vector{Z2Number}
+        @test v == zeros(Bool, 13)
+    end
+
+    @testset "matrix getindex" begin
+        A = rand(Z2Number, 13, 19)
+        @test A[9,9] isa Z2Number
+        @test A[9,5:10] isa Vector{Z2Number}
+        @test A[9,:] isa Z2RowVector{Vector{Z2Block}}
+        @test A[5:10,9] isa Vector{Z2Number}
+        @test A[5:10,5:10] isa Z2Matrix{Matrix{Z2Block}}
+        @test A[5:10,:] isa Z2Matrix{Matrix{Z2Block}}
+        @test A[:,9]  isa Z2ColVector{Vector{Z2Block}}
+        @test A[:,5:10] isa Z2Matrix{Matrix{Z2Block}}
+        @test A[:,:] isa Z2Matrix{Matrix{Z2Block}}
     end
 end
 

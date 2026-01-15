@@ -1,8 +1,8 @@
 # Linear Algebra Support
 ✅ = fully supported
-❕ = fall back
+❎ = fall back
 ❌ = not supported
-❔ = unknown status
+❔ = not tested
 
 ### Multiplication
 

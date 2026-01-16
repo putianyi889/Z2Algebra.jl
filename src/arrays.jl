@@ -22,4 +22,7 @@ end
 
 include("Arrays/vector.jl")
 include("Arrays/matrix.jl")
+
+const Z2Array = Union{Z2RowVector,Z2ColVector,Z2Matrix}
+
 include("Arrays/similar.jl")

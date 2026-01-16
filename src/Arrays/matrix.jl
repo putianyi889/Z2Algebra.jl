@@ -48,14 +48,13 @@ end
 function Z2Matrix(::UndefInitializer, dims::Dims{2})
     blocks = Matrix{Z2Block}(undef, map(size_to_blocksize, dims))
     tailsize = map(size_to_tailsize, dims)
-    tailmask!(blocks, tailsize)
-    return _Z2Matrix(blocks, tailsize)
+    return tailmask!(_Z2Matrix(blocks, tailsize))
 end
 Z2Matrix(::UndefInitializer, m::Integer, n::Integer) = Z2Matrix(undef, (m,n))
 
 check_z2array_valid(M::Z2Matrix) = _check_z2matrix(M.blocks, M.tailsize)
 
-function tailmask!(::Type{Z2Matrix}, blocks::AbstractMatrix{Z2Block}, tailsize::Dims{2})
+function tailmask!(::Type{<:Z2Matrix}, blocks::AbstractMatrix{Z2Block}, tailsize::Dims{2})
     for i in axes(blocks, 1)
         blocks[i,end] = blocks[i,end][:,0:tailsize[2]]
     end
@@ -86,11 +85,7 @@ end
     M.blocks[blocki, blockj] = setindex(M.blocks[blocki, blockj], v, size_to_tailsize(i), size_to_tailsize(j))
 end
 
-function similar(A::Z2Matrix, ::Type{Z2Number}, dims::Dims{2})
-    A = _Z2Matrix(similar(A.blocks, map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
-    tailmask!(A)
-    return A
-end
+
 copy_similar(A::Z2Matrix, ::Type{Z2Number}) = copymutable(A)
 copymutable(A::Z2Matrix) = _Z2Matrix(copymutable(A.blocks), A.tailsize)
 

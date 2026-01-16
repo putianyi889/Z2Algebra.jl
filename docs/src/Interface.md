@@ -10,7 +10,7 @@
 |:---:|:---:|:---:|:---:|
 |`T(undef,dims)`|✅|✅|✅|
 |`T(undef,dims...)`|✅|✅|✅|
-|`similar`|✅|❔|❔|
+|`similar`|✅|✅|✅|
 |`T(::AbstractArray)`|✅|✅|✅|
 |`rand(Z2Number,dims)`|✅|✅|❌|
 |`rand(Z2Number,dims...)`|✅|✅|❌|
@@ -19,13 +19,16 @@
 |`zeros(Z2Number,dims)`|✅|❌|❌|
 |`zeros(Z2Number,dims...)`|✅|❌|❌|
 
+!!! note "Default constructor for vectors"
+    When in ambiguity, `Z2RowVector` is constructed by default. This applies to `similar`, `rand`, `ones`, etc.
+
 ## `getindex` and `setindex!`
 
 ### `getindex(::Z2Matrix, I, J)`
 
 ||Number|Range|Colon|
 |:---:|:---:|:---:|:---:|
-|Number|✅|❌|✅|
+|Number|✅|❎|✅|
 |Range|❌|❎|❎|
 |Colon|✅|❎|❎|
 

@@ -15,14 +15,14 @@ struct Z2ColVector{B<:AbstractVector{Z2Block}} <: AbstractVector{Z2Number}
     global _Z2ColVector(blocks::AbstractVector{Z2Block}, tailsize::Int) = new{typeof(blocks)}(blocks, tailsize)
 end
 
-function tailmask!(::Type{Z2RowVector}, blocks, tailsize)
+function tailmask!(::Type{<:Z2RowVector}, blocks, tailsize)
     for i in 1:length(blocks)-1
         blocks[i] = Z2Block(blocks[i].data & ROW_MASK)
     end
     blocks[end] = blocks[end][0,0:tailsize]
 end
 
-function tailmask!(::Type{Z2ColVector}, blocks, tailsize)
+function tailmask!(::Type{<:Z2ColVector}, blocks, tailsize)
     for i in 1:length(blocks)-1
         blocks[i] = Z2Block(blocks[i].data & COL_MASK)
     end
@@ -98,22 +98,15 @@ end
 
 @propagate_inbounds function setindex!(v::Z2RowVector, x, i::Integer)
     @boundscheck checkbounds(v, i)
-    v.blocks[size_to_blocksize(i)] = rowsetindex(v.blocks[size_to_blocksize(i)].data, isodd(x), size_to_tailsize(i))
+    blocki = size_to_blocksize(i)
+    v.blocks[blocki] = Z2Block(rowsetindex(v.blocks[blocki].data, isodd(x), size_to_tailsize(i)))
     return isodd(x)
 end
 @propagate_inbounds function setindex!(v::Z2ColVector, x, i::Integer)
     @boundscheck checkbounds(v, i)
-    v.blocks[size_to_blocksize(i)] = colsetindex(v.blocks[size_to_blocksize(i)].data, isodd(x), size_to_tailsize(i))
+    blocki = size_to_blocksize(i)
+    v.blocks[blocki] = Z2Block(colsetindex(v.blocks[blocki].data, isodd(x), size_to_tailsize(i)))
     return isodd(x)
-end
-
-function similar(v::Z2RowVector, ::Type{Z2Number}, dims::Dims{1})
-    v = _Z2RowVector(similar(v.blocks, map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
-    return tailmask!(v)
-end
-function similar(v::Z2ColVector, ::Type{Z2Number}, dims::Dims{1})
-    v = _Z2ColVector(similar(v.blocks, map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
-    return tailmask!(v)
 end
 
 rand(r::AbstractRNG, ::Type{Z2Number}, dims::Dims{1}) = rand!(r, Z2RowVector(undef, dims), Z2Number)

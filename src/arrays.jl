@@ -9,11 +9,17 @@ size_to_blocksize(n::Integer) = cld(n, 8)
 size_to_tailsize(n::Integer) = (n-1) % 8
 blocktailsize_to_size(blocksize::Integer, tailsize::Integer) = 8*blocksize-7+tailsize
 
-function tailmask!(blocks::AbstractMatrix{Z2Block}, tailsize::Dims{2})
-    for i in axes(blocks, 1)
-        blocks[i,end] = blocks[i,end][:,0:tailsize[2]]
-    end
-    for j in axes(blocks, 2)
-        blocks[end,j] = blocks[end,j][0:tailsize[1],:]
-    end
+"""
+    tailmask!(::T) -> T
+    tailmask!(T, blocks, tailsize)
+
+Make a Z2Array valid by masking the blocks with tailsize information.
+"""
+function tailmask!(A)
+    tailmask!(typeof(A), A.blocks, A.tailsize)
+    return A
 end
+
+include("Arrays/vector.jl")
+include("Arrays/matrix.jl")
+include("Arrays/similar.jl")

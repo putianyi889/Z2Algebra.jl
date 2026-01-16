@@ -10,6 +10,7 @@
 |:---:|:---:|:---:|:---:|
 |`T(undef,dims)`|✅|✅|✅|
 |`T(undef,dims...)`|✅|✅|✅|
+|`similar`|✅|❔|❔|
 |`T(::AbstractArray)`|✅|✅|✅|
 |`rand(Z2Number,dims)`|✅|✅|❌|
 |`rand(Z2Number,dims...)`|✅|✅|❌|

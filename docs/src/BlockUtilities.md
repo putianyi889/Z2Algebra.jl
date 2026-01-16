@@ -16,6 +16,8 @@ Z2Algebra.getrowsum
 Z2Algebra.getallsum
 Z2Algebra.colvecmulrowvec
 Z2Algebra.matmulmat
+Z2Algebra.matmulrowvec
+Z2Algebra.matmulcolvec
 Z2Algebra.matldivmat
 Z2Algebra.padidentity
 ```

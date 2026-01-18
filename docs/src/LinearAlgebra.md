@@ -14,20 +14,15 @@
 |`triu`|❔|
 |`tril`|❔|
 
+## Broadcast
+
 ## Arithmetic
-
-### Broadcast
-
-### Addition
 
 |Operation|Status|
 |:-:|:-:|
 |`mat + mat`|✅|
-
-### Multiplication
-
-|Operation|Status|
-|:-:|:-:|
+|`mat - mat`|✅|
+|`-mat`|✅|
 |`mat * mat`|✅|
 |`mat * transmat`|❎|
 |`mat * rowvec`|❎|
@@ -38,5 +33,3 @@
 |`rowvec ⋅ rowvec`|❔|
 |`rowvec ⋅ colvec`|❔|
 |`colvec ⋅ rowvec`|❔|
-
-### Division

@@ -9,6 +9,7 @@ function +(A::Z2Matrix, B::Z2Matrix)
 end
 
 -(A::Z2Matrix, B::Z2Matrix) = A + B
+-(A::Z2Matrix) = A
 
 function *(A::Z2Matrix, B::Z2Matrix)
     LinearAlgebra.matmul_size_check(size(A), size(B))

@@ -1,18 +1,18 @@
 # Linear Algebra Support
 ✅ = fully supported
-❎ = fall back
-❌ = not supported
+❎ = fall back (no specialized algorithm)
+❌ = not supported (returns `Matrix`, `Vector`, etc.)
 ❔ = not tested
 
 ## Constructors
 
 |Method|Status|
 |:-:|:-:|
-|`copytrito!`|❔|
-|`triu!`|❔|
-|`tril!`|❔|
-|`triu`|❔|
-|`tril`|❔|
+|`copytrito!`|✅|
+|`triu!`|✅|
+|`tril!`|✅|
+|`triu`|✅|
+|`tril`|✅|
 
 ## Broadcast
 
@@ -33,3 +33,6 @@
 |`rowvec ⋅ rowvec`|❔|
 |`rowvec ⋅ colvec`|❔|
 |`colvec ⋅ rowvec`|❔|
+|`mat \ mat`|❎|
+|`mat \ rowvec`|❌|
+|`mat \ colvec`|❌|

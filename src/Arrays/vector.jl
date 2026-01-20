@@ -109,7 +109,10 @@ end
     return isodd(x)
 end
 
-rand(r::AbstractRNG, ::Type{Z2Number}, dims::Dims{1}) = rand!(r, Z2RowVector(undef, dims), Z2Number)
+function rand(r::AbstractRNG, ::Type{Z2Number}, dims::Dims{1})
+    A = _Z2RowVector(rand(r, Z2Block, size_to_blocksize(dims[1])), size_to_tailsize(dims[1]))
+    return tailmask!(A)
+end
 
 function rand!(r::AbstractRNG, A::Z2RowVector, ::Type{Z2Number})
     rand!(r, A.blocks)

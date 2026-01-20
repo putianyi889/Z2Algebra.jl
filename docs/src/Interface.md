@@ -1,7 +1,11 @@
 # Interface Support
+
 ✅ = fully supported
-❎ = fall back
-❌ = not supported
+
+❎ = fall back (no specialized algorithm)
+
+❌ = not supported (returns incorrect types such as `Matrix`, `Vector`, etc.)
+
 ❔ = not tested
 
 ## Constructor
@@ -13,11 +17,8 @@
 |`similar`|✅|✅|✅|
 |`T(::AbstractArray)`|✅|✅|✅|
 |`rand(Z2Number,dims)`|✅|✅|❌|
-|`rand(Z2Number,dims...)`|✅|✅|❌|
-|`ones(Z2Number,dims)`|✅|❌|❌|
-|`ones(Z2Number,dims...)`|✅|❌|❌|
-|`zeros(Z2Number,dims)`|✅|❌|❌|
-|`zeros(Z2Number,dims...)`|✅|❌|❌|
+|`ones(Z2Number,dims)`|✅|✅|❌|
+|`zeros(Z2Number,dims)`|✅|✅|❌|
 
 !!! note "Default constructor for vectors"
     When in ambiguity, `Z2RowVector` is constructed by default. This applies to `similar`, `rand`, `ones`, etc.

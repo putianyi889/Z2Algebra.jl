@@ -114,19 +114,11 @@ end
         test_validity(v, Z2RowVector{Vector{Z2Block}}, (19,))
     end
 
-    @testset "rand constructor (Tuple dims)" begin
+    @testset "rand" begin
         A = rand(Z2Number, (13, 19))
         test_validity(A, Z2Matrix{Matrix{Z2Block}}, (13, 19))
 
         v = rand(Z2Number, (13,))
-        test_validity(v, Z2RowVector{Vector{Z2Block}}, (13,))
-    end
-
-    @testset "rand constructor (Vararg dims)" begin
-        A = rand(Z2Number, 13, 19)
-        test_validity(A, Z2Matrix{Matrix{Z2Block}}, (13, 19))
-
-        v = rand(Z2Number, 13)
         test_validity(v, Z2RowVector{Vector{Z2Block}}, (13,))
     end
 
@@ -144,46 +136,24 @@ end
         @test u == V == v
     end
 
-    @testset "ones and zeros" begin
-        @testset "ones (Tuple dims)" begin
-            A = ones(Z2Number, (13, 19))
-            @test A isa Z2Matrix{Matrix{Z2Block}}
-            @test A == ones(Bool, 13, 19)
+    @testset "ones" begin
+        A = ones(Z2Number, (13, 19))
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test A == ones(Bool, 13, 19)
 
-            v = ones(Z2Number, (13,))
-            @test v isa Vector{Z2Number}
-            @test v == ones(Bool, 13)
-        end
+        v = ones(Z2Number, (13,))
+        @test v isa Z2RowVector{Vector{Z2Block}}
+        @test v == ones(Bool, 13)
+    end
 
-        @testset "ones (Vararg dims)" begin
-            A = ones(Z2Number, 13, 19)
-            @test A isa Z2Matrix{Matrix{Z2Block}}
-            @test A == ones(Bool, 13, 19)
+    @testset "zeros" begin
+        A = zeros(Z2Number, (13, 19))
+        @test A isa Z2Matrix{Matrix{Z2Block}}
+        @test A == zeros(Bool, 13, 19)
 
-            v = ones(Z2Number, 13)
-            @test v isa Vector{Z2Number}
-            @test v == ones(Bool, 13)
-        end
-
-        @testset "zeros (Tuple dims)" begin
-            A = zeros(Z2Number, (13, 19))
-            @test A isa Z2Matrix{Matrix{Z2Block}}
-            @test A == zeros(Bool, 13, 19)
-
-            v = zeros(Z2Number, (13,))
-            @test v isa Vector{Z2Number}
-            @test v == zeros(Bool, 13)
-        end
-
-        @testset "zeros (Vararg dims)" begin
-            A = zeros(Z2Number, 13, 19)
-            @test A isa Z2Matrix{Matrix{Z2Block}}
-            @test A == zeros(Bool, 13, 19)
-
-            v = zeros(Z2Number, 13)
-            @test v isa Vector{Z2Number}
-            @test v == zeros(Bool, 13)
-        end
+        v = zeros(Z2Number, (13,))
+        @test v isa Z2RowVector{Vector{Z2Block}}
+        @test v == zeros(Bool, 13)
     end
 
     @testset "similar" begin

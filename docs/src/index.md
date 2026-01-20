@@ -65,23 +65,3 @@ end
     A[:,3]
     A[:,3].blocks
     ```
-
-**Supported interface**
-
-|Method|`Z2Matrix`|`Z2RowVector`|`Z2ColVector`|
-|------|----------|-------------|-------------|
-|`size`|✅|✅|✅|
-|`similar`|✅|❌|❌|
-|`copymutable`, `copy`|✅|❌|❌|
-|`zeros`|✅|❌|❌|
-|`ones`|✅|❌|❌|
-
-## Specialized linear algebra routines
-While Julia's generic routines can already handle linear algebra with `Z2Number` provided, they are not optimized for `Z2Matrix` and `Z2Vector` layouts. Here list some routines that have been specialized.
-
-|Routine|Types|Downstreams|
-|-------|-----|-----------|
-|`*`|`Z2Matrix`||
-|`tr`|`Z2Matrix`||
-|`lu!`|`Z2Matrix`|`\`, `det`, `rank`, `inv`|
-|`copytrito!`, `triu!`, `tril!`|`Z2Matrix`|`triu`, `tril`|

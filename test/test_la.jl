@@ -7,28 +7,34 @@
         U1 = triu(A)
         @test U1 isa Z2Matrix{Matrix{Z2Block}}
         @test U1 == triu(M)
+        @test istriu(U1)
 
         U2 = triu(A, 1)
         @test U2 isa Z2Matrix{Matrix{Z2Block}}
         @test U2 == triu(M, 1)
+        @test istriu(U2, 1)
 
         U3 = triu(A, -1)
         @test U3 isa Z2Matrix{Matrix{Z2Block}}
         @test U3 == triu(M, -1)
+        @test istriu(U3, -1)
     end
 
     @testset "tril" begin
         L1 = tril(A)
         @test L1 isa Z2Matrix{Matrix{Z2Block}}
         @test L1 == tril(M)
+        @test istril(L1)
 
         L2 = tril(A, 1)
         @test L2 isa Z2Matrix{Matrix{Z2Block}}
         @test L2 == tril(M, 1)
+        @test istril(L2, 1)
 
         L3 = tril(A, -1)
         @test L3 isa Z2Matrix{Matrix{Z2Block}}
         @test L3 == tril(M, -1)
+        @test istril(L3, -1)
     end
 
     @testset "tril!, triu!, copytrito!" begin
@@ -101,6 +107,13 @@ end
         @test Btv isa Z2ColVector{Vector{Z2Block}}
         @test Btv == transpose(Matrix(B)) * Vector(v)
     end
+
+    @testset "dot" begin
+        @test u ⋅ u ≡ Vector(u) ⋅ Vector(u)
+        @test u ⋅ v ≡ Vector(u) ⋅ Vector(v)
+        @test v ⋅ u ≡ Vector(v) ⋅ Vector(u)
+        @test v ⋅ v ≡ Vector(v) ⋅ Vector(v)
+    end
 end
 
 @testset "division" begin
@@ -125,7 +138,7 @@ end
 
     @testset "vector" begin
         x = A \ u
-        @test_broken x isa Z2RowVector{Vector{Z2Block}}
+        @test x isa Z2RowVector{Vector{Z2Block}}
         @test A * x == u
 
         y = A \ v

@@ -1,4 +1,4 @@
-import Base: size, getindex, isbitstype, one, similar, copymutable, zeros, ones
+import Base: size, getindex, isbitstype, one, similar, copymutable
 import LinearAlgebra: norm, copy_similar
 import Random: rand, rand!
 
@@ -85,7 +85,6 @@ end
     M.blocks[blocki, blockj] = setindex(M.blocks[blocki, blockj], v, size_to_tailsize(i), size_to_tailsize(j))
 end
 
-
 copy_similar(A::Z2Matrix, ::Type{Z2Number}) = copymutable(A)
 copymutable(A::Z2Matrix) = _Z2Matrix(copymutable(A.blocks), A.tailsize)
 
@@ -96,13 +95,6 @@ function one(A::Z2Matrix)
     ts = A.tailsize[1]
     ret.blocks[end,end] = ret.blocks[end,end][0:ts,0:ts]
     return ret
-end
-
-zeros(::Type{Z2Number}, dims::Dims{2}) = _Z2Matrix(zeros(Z2Block, map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
-function ones(::Type{Z2Number}, dims::Dims{2})
-    A = _Z2Matrix(fill(Z2Block(FULL_MASK), map(size_to_blocksize, dims)), map(size_to_tailsize, dims))
-    tailmask!(A)
-    return A
 end
 
 rand(r::AbstractRNG, ::Type{Z2Number}, dims::Dims{2}) = rand!(r, Z2Matrix(undef, dims), Z2Number)

@@ -1,8 +1,18 @@
 # Linear Algebra Support
+
 ✅ = fully supported
+
 ❎ = fall back (no specialized algorithm)
-❌ = not supported (returns `Matrix`, `Vector`, etc.)
+
+❌ = not supported (returns incorrect types such as `Matrix`, `Vector`, etc.)
+
 ❔ = not tested
+
+## Properties
+|Method|`Z2Matrix`|`Z2RowVector`|`Z2ColVector`|
+|:-:|:-:|:-:|:-:|
+|`istriu`|❎|||
+|`istril`|❎|||
 
 ## Constructors
 
@@ -30,9 +40,9 @@
 |`transmat * mat`|❎|
 |`transmat * rowvec`|❎|
 |`transmat * colvec`|❎|
-|`rowvec ⋅ rowvec`|❔|
-|`rowvec ⋅ colvec`|❔|
-|`colvec ⋅ rowvec`|❔|
+|`rowvec ⋅ rowvec`|❎|
+|`rowvec ⋅ colvec`|❎|
+|`colvec ⋅ rowvec`|❎|
 |`mat \ mat`|❎|
-|`mat \ rowvec`|❌|
+|`mat \ rowvec`|❎|
 |`mat \ colvec`|❌|

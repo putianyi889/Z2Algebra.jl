@@ -1,6 +1,6 @@
 import Base: +, -, *
 import Base: getindex, isbitstype, eltype, iszero, isone, zero, one, size, axes
-import Random: rand
+import Random: rand, rand!
 import LinearAlgebra: Matrix, tr, triu, tril
 
 struct Z2Block
@@ -43,3 +43,9 @@ tril(a::Z2Block) = Z2Block(a.data & TRIL_MASK)
 
 triu(a::Z2Block, k::Integer) = Z2Block(a.data & triu_mask(k))
 tril(a::Z2Block, k::Integer) = Z2Block(a.data & tril_mask(k))
+
+function rand!(r::AbstractRNG, A::AbstractArray{Z2Block}, ::Type{Z2Block})
+    _A = reinterpret(UInt64, A)
+    rand!(r, _A)
+    return A
+end

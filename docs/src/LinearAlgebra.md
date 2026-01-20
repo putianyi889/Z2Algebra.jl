@@ -13,6 +13,7 @@
 |:-:|:-:|:-:|:-:|
 |`istriu`|✅|||
 |`istril`|✅|||
+|`ishermitian`, `issymmetric`|✅|||
 
 ## Constructors
 

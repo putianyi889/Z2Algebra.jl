@@ -1,7 +1,7 @@
 import Base: +, -, *
 import Base: getindex, isbitstype, eltype, iszero, isone, zero, one, size, axes
 import Random: rand, rand!
-import LinearAlgebra: Matrix, tr, triu, tril, istriu, istril
+import LinearAlgebra: Matrix, tr, triu, tril, istriu, istril, transpose, adjoint
 
 struct Z2Block
     data::UInt64
@@ -52,3 +52,6 @@ function rand!(r::AbstractRNG, A::AbstractArray{Z2Block}, ::Type{Z2Block})
     rand!(r, _A)
     return A
 end
+
+transpose(a::Z2Block) = Z2Block(transposeblock(a.data))
+adjoint(a::Z2Block) = transpose(a)

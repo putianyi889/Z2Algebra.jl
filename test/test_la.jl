@@ -52,6 +52,16 @@
     end
 end
 
+@testset "symmetric" begin
+    @testset "issymmetric" begin
+        A = rand(Z2Number, 13, 13)
+        @test issymmetric(A) == issymmetric(Matrix(A))
+
+        S = Z2Matrix(Symmetric(A))
+        @test issymmetric(S)
+    end
+end
+
 @testset "addition" begin
     @testset "matrix" begin
         A = rand(Z2Number, 13, 19)

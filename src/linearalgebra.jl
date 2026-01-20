@@ -1,5 +1,5 @@
 import Base: +, -, *, /, \
-import LinearAlgebra: tr, lu!, copytrito!, triu!, tril!
+import LinearAlgebra: tr, lu!, copytrito!, triu!, tril!, ishermitian
 using LinearAlgebra.LAPACK
 using LinearAlgebra.BLAS
 
@@ -21,6 +21,10 @@ function tr(A::Z2Matrix)
     return tr(tr(A.blocks))
 end
 
+function ishermitian(A::Z2Matrix)
+    A.tailsize[1] == A.tailsize[2] || return false
+    return ishermitian(A.blocks)
+end
+
 include("LinearAlgebra/triangular.jl")
 include("LinearAlgebra/lu.jl")
-

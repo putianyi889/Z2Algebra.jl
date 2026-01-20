@@ -14,7 +14,7 @@ end
 
 function istril(A::Z2Matrix, k::Integer)
     dl, kl = fldmod(k, 8)
-    !istril(A.blocks, dl) && return false
+    !istril(A.blocks, dl+1) && return false
     for i in diagind(A.blocks, dl)
         !istril(A.blocks[i], kl) && return false
     end
@@ -23,7 +23,6 @@ function istril(A::Z2Matrix, k::Integer)
     end
     return true
 end
-
 
 function copytrito!(B::Z2Matrix, A::Z2Matrix, uplo::AbstractChar)
     BLAS.chkuplo(uplo)

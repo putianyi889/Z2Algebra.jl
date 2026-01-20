@@ -11,8 +11,8 @@
 ## Properties
 |Method|`Z2Matrix`|`Z2RowVector`|`Z2ColVector`|
 |:-:|:-:|:-:|:-:|
-|`istriu`|❎|||
-|`istril`|❎|||
+|`istriu`|✅|||
+|`istril`|✅|||
 
 ## Constructors
 

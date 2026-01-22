@@ -3,12 +3,6 @@ import LinearAlgebra: tr, lu!, copytrito!, triu!, tril!, ishermitian
 using LinearAlgebra.LAPACK
 using LinearAlgebra.BLAS
 
-function +(A::Z2Matrix, B::Z2Matrix)
-    Base.promote_shape(A, B)
-    return _Z2Matrix(A.blocks + B.blocks, A.tailsize)
-end
-
--(A::Z2Matrix, B::Z2Matrix) = A + B
 -(A::Z2Matrix) = A
 
 function *(A::Z2Matrix, B::Z2Matrix)

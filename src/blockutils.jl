@@ -121,6 +121,12 @@ Transposes the block where only the first column is nonzero.
 """
 column2row(x::UInt64) = (x | (x >> 7) | (x >> 14) | (x >> 21) | (x >> 28) | (x >> 35) | (x >> 42) | (x >> 49)) & ROW_MASK
 
+"""
+    row2column(x::UInt64)::UInt64
+
+Transposes the block where only the first row is nonzero.
+"""
+row2column(x::UInt64) = (x | (x << 7) | (x << 14) | (x << 21) | (x << 28) | (x << 35) | (x << 42) | (x << 49)) & COL_MASK
 
 """
     transposeblock(x::UInt64)::UInt64

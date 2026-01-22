@@ -10,6 +10,7 @@ Z2Algebra.rowvecones
 Z2Algebra.colvecones
 Z2Algebra.blockones
 Z2Algebra.column2row
+Z2Algebra.row2column
 Z2Algebra.transposeblock
 Z2Algebra.getcolsum
 Z2Algebra.getrowsum

@@ -5,16 +5,6 @@ import Base: copyto!, similar
 
 similar(::Broadcasted{DefaultArrayStyle{2}}, ::Type{Z2Number}, dims) = similar(Z2Matrix, dims)
 
-#=
-Since the tail blocks are not full, broadcasting over blocks is not correct for general operations.
-
-Block-wise broadcasting works in one of the following cases:
-- Case `vvt`. `op.(vec,vec')` if `op(0,a) = op(a,0) = 0`. For example, multiplication.
-- Case `mm`. `op.(mat,mat)` and `op.(vec,vec)` if `op(0,0) = 0`. For example, addition and multiplication.
-
-(TODO) Still, for general operations, there is room for performance improvement since filling a zero matrix can be faster than setting all elements one by one.
-=#
-
 ### Cast vvt
 const VVtOps = Union{typeof(*), typeof(&)}
 

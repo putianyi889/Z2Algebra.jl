@@ -10,4 +10,6 @@ include("block.jl")
 include("arrays.jl")
 include("linearalgebra.jl")
 
+include("ambiguities.jl")
+
 end

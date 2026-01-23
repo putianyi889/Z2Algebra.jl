@@ -213,6 +213,7 @@ end
 include("test_bc.jl")
 include("test_la.jl")
 
+
 using Documenter
 
 DocMeta.setdocmeta!(Z2Algebra, :DocTestSetup, :(
@@ -222,4 +223,11 @@ DocMeta.setdocmeta!(Z2Algebra, :DocTestSetup, :(
 
 @testset "Doctest" begin
     doctest(Z2Algebra)
+end
+
+
+using Aqua
+
+@testset "Aqua" begin
+	Aqua.test_all(Z2Algebra)
 end

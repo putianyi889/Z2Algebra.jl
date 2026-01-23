@@ -8,6 +8,7 @@ end
 Z2Number(x::Integer) = Z2Number(isodd(x))
 (::Type{T})(a::Z2Number) where {T<:Integer} = T(a.value)
 Z2Number(x::Z2Number) = x
+
 promote_rule(::Type{Z2Number}, ::Type{T}) where {T<:Integer} = Z2Number
 show(io::IO, a::Z2Number) = print(io, "ℤ₂(", a.value ? "1" : "0", ")")
 

@@ -21,4 +21,6 @@ Z2Algebra.matmulrowvec
 Z2Algebra.matmulcolvec
 Z2Algebra.matldivmat
 Z2Algebra.padidentity
+
+Z2Algebra._to_vec_block
 ```

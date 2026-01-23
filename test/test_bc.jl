@@ -1,5 +1,44 @@
 
 @testset "broadcast" begin
+    @testset "vec & vec" begin
+        u1 = rand(Z2Number, 13)
+        u2 = rand(Z2Number, 13)
+        v1 = Z2ColVector(rand(Z2Number, 13))
+        v2 = Z2ColVector(rand(Z2Number, 13))
+
+        A1 = u1 .+ u2
+        @test A1 isa Z2RowVector{Vector{Z2Block}}
+        @test A1 == Vector(u1) .+ Vector(u2)
+
+        A2 = v1 .+ v2
+        @test A2 isa Z2ColVector{Vector{Z2Block}}
+        @test A2 == Vector(v1) .+ Vector(v2)
+
+        A3 = u1 .+ v2
+        @test A3 isa Z2RowVector{Vector{Z2Block}}
+        @test A3 == Vector(u1) .+ Vector(v2)
+
+        A4 = v1 .+ u2
+        @test A4 isa Z2RowVector{Vector{Z2Block}}
+        @test A4 == Vector(v1) .+ Vector(u2)
+
+        B1 = u1 .* u2
+        @test B1 isa Z2RowVector{Vector{Z2Block}}
+        @test B1 == Vector(u1) .* Vector(u2)
+
+        B2 = v1 .* v2
+        @test B2 isa Z2ColVector{Vector{Z2Block}}
+        @test B2 == Vector(v1) .* Vector(v2)
+
+        B3 = u1 .* v2
+        @test B3 isa Z2RowVector{Vector{Z2Block}}
+        @test B3 == Vector(u1) .* Vector(v2)
+
+        B4 = v1 .* u2
+        @test B4 isa Z2RowVector{Vector{Z2Block}}
+        @test B4 == Vector(v1) .* Vector(u2)
+    end
+
     @testset "vec & adjvec" begin
         u1 = rand(Z2Number, 13)
         u2 = rand(Z2Number, 19)

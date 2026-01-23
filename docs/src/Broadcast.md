@@ -4,7 +4,9 @@ Since the tail blocks are not full, broadcasting over blocks is not correct for 
 
 Block-wise broadcasting works in one of the following cases:
 - Case `vvt`. `op.(vec,vec')` if `op(0,a) = op(a,0) = 0`.
-- Case `mm`. `op.(mat,mat)` if `op(0,0) = 0`.
+- Case `mm`. `op.(mat,mat)` and if `op(0,0) = 0`.
+- `op.(vec,vec)` fits into Case `mm` if the arguments have the same layout. Otherwise one of them is converted.
+- Other cases such as `op.(mat,vec)` are not implemented yet.
 
 Supported `vvt` and `mm` operations are:
 ```@setup hash575

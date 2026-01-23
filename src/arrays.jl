@@ -27,3 +27,4 @@ const Z2Array = Union{Z2RowVector,Z2ColVector,Z2Matrix}
 
 include("Arrays/similar.jl")
 include("Arrays/fill.jl")
+include("Arrays/broadcast.jl")

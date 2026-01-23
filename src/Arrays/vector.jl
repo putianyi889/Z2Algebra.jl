@@ -15,6 +15,8 @@ struct Z2ColVector{B<:AbstractVector{Z2Block}} <: AbstractVector{Z2Number}
     global _Z2ColVector(blocks::AbstractVector{Z2Block}, tailsize::Int) = new{typeof(blocks)}(blocks, tailsize)
 end
 
+const Z2Vector{B<:AbstractVector{Z2Block}} = Union{Z2RowVector{B},Z2ColVector{B}}
+
 function tailmask!(::Type{<:Z2RowVector}, blocks, tailsize)
     for i in 1:length(blocks)-1
         blocks[i] = Z2Block(blocks[i].data & ROW_MASK)

@@ -210,6 +210,7 @@ end
     end
 end
 
+include("test_bc.jl")
 include("test_la.jl")
 
 using Documenter

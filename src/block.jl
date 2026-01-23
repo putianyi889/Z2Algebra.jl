@@ -1,4 +1,4 @@
-import Base: +, -, *
+import Base: +, -, *, &
 import Base: getindex, isbitstype, eltype, iszero, isone, zero, one, size, axes
 import Random: rand, rand!
 import LinearAlgebra: Matrix, tr, triu, tril, istriu, istril, transpose, adjoint
@@ -28,6 +28,8 @@ isone(a::Z2Block) = a.data == 0x8040201008040201
 +(a::Z2Block, b::Z2Block) = Z2Block(a.data ⊻ b.data)
 -(a::Z2Block, b::Z2Block) = a + b
 *(a::Z2Block, b::Z2Block) = Z2Block(matmulmat(a.data, b.data))
+
+(&)(a::Z2Block, b::Z2Block) = Z2Block(a.data & b.data)
 
 getindex(a::Z2Block, i::Integer, j::Integer) = Z2Number(blockgetindex(a.data, i, j))
 getindex(a::Z2Block, I, J) = Z2Block(blockgetindex(a.data, I, J))

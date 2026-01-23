@@ -25,9 +25,10 @@
 |`triu`|✅|
 |`tril`|✅|
 
-## Broadcast
-
 ## Arithmetic
+
+!!! note
+    Addition and subtraction, as well as `vec * vec'`, fall back to [Broadcast Support](@ref).
 
 |Operation|Status|
 |:-:|:-:|
@@ -38,9 +39,9 @@
 |`mat * transmat`|❎|
 |`mat * rowvec`|❎|
 |`mat * colvec`|❎|
-|`transmat * mat`|❎|
-|`transmat * rowvec`|❎|
-|`transmat * colvec`|❎|
+|`mat' * mat`|❎|
+|`mat' * rowvec`|❎|
+|`mat' * colvec`|❎|
 |`rowvec ⋅ rowvec`|❎|
 |`rowvec ⋅ colvec`|❎|
 |`colvec ⋅ rowvec`|❎|

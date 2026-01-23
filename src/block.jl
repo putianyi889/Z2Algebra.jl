@@ -1,5 +1,5 @@
 import Base: +, -, *, &
-import Base: getindex, isbitstype, eltype, iszero, isone, zero, one, size, axes
+import Base: getindex, isbitstype, eltype, iszero, isone, zero, one, size, axes, all, any
 import Random: rand, rand!
 import LinearAlgebra: Matrix, tr, triu, tril, istriu, istril, transpose, adjoint
 
@@ -57,3 +57,6 @@ end
 
 transpose(a::Z2Block) = Z2Block(transposeblock(a.data))
 adjoint(a::Z2Block) = transpose(a)
+
+all(a::Z2Block) = a.data == FULL_MASK
+any(a::Z2Block) = !iszero(a.data)

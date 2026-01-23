@@ -13,6 +13,7 @@ A `Z2Number <: Integer` is a wrapper around a `Bool`.
 |Property|`iszero`, `isone`, `isodd`, `iseven`, `isfinite`, `isinf`, `isnan`|
 |Literal zero and one|`zero`, `one`|
 |Comparison|`<`, `signbit`|
+|Other|`rand`|
 
 ## `Z2Block`
 `Z2Block` is a mini 8x8 matrix of `Z2Number`, stored in one `UInt64`. `Z2Block` is not a subtype of `AbstractMatrix`, but rather a backend of [`Z2Matrix` and `Z2Vector`](#Z2Matrix-and-Z2Vector).

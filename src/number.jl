@@ -1,5 +1,5 @@
 import Base: +, -, *, /, one, zero, isone, iszero, isodd, iseven, isfinite, isinf, isnan, inv, signbit, <
-import Base: promote_rule, show
+import Base: promote_rule, show, rand
 
 struct Z2Number <: Integer
     value::Bool
@@ -43,3 +43,5 @@ iseven(a::Z2Number) = !a.value
 isfinite(::Z2Number) = true
 isinf(::Z2Number) = false
 isnan(::Z2Number) = false
+
+rand(rng::Random.AbstractRNG, ::Random.SamplerType{Z2Number}) = Z2Number(rand(rng, Random.SamplerType{Bool}()))

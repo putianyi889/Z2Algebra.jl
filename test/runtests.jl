@@ -22,6 +22,8 @@ end
 
         @test Int(Z2Number(false)) ≡ 0
         @test Int(Z2Number(true)) ≡ 1
+
+        @test rand(Z2Number) isa Z2Number
     end
 
     @testset "arithmetic" begin

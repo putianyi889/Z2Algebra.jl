@@ -41,3 +41,13 @@
 |`fill!`|❔|❔|❔|
 |`copyto!`|❔|❔|❔|
 |`copy`|❔|❔|❔|
+
+## Reduce
+
+|Routine|`Z2Matrix`|`Z2RowVector`|`Z2ColVector`|
+|:---:|:---:|:---:|:---:|
+|`all`|✅|✅|✅|
+|`any`|✅|✅|✅|
+|`count`|❔|❔|❔|
+|`sum`|❔|❔|❔|
+|`prod`|❔|❔|❔|

@@ -32,8 +32,6 @@
 
 |Operation|Status|
 |:-:|:-:|
-|`mat + mat`|✅|
-|`mat - mat`|✅|
 |`-mat`|✅|
 |`mat * mat`|✅|
 |`mat * transmat`|❎|

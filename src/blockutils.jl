@@ -126,7 +126,7 @@ column2row(x::UInt64) = (x * 0x0102040810204080) >> 56
 
 Transposes the block where only the first row is nonzero.
 """
-row2column(x::UInt64) = (x * 0x0102040810204081) & COL_MASK
+row2column(x::UInt64) = (x * 0x0000040010004001 | x * 0x0002000800200080) & COL_MASK
 
 """
     transposeblock(x::UInt64)::UInt64

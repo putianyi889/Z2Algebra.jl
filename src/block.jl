@@ -2,6 +2,7 @@ import Base: +, -, *, &
 import Base: getindex, isbitstype, eltype, iszero, isone, zero, one, size, axes, all, any
 import Random: rand, rand!
 import LinearAlgebra: Matrix, tr, triu, tril, istriu, istril, transpose, adjoint
+using Tullio
 
 struct Z2Block
     data::UInt64
@@ -60,3 +61,8 @@ adjoint(a::Z2Block) = transpose(a)
 
 all(a::Z2Block) = a.data == FULL_MASK
 any(a::Z2Block) = !iszero(a.data)
+
+function mul!(Y::AbstractArray{Z2Block}, A::AbstractArray{Z2Block}, B::AbstractArray{Z2Block})
+    LinearAlgebra.matmul_size_check(Y, A, B)
+    @tullio Y[i, j] = A[i, k] * B[k, j]
+end

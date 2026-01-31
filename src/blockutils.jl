@@ -198,18 +198,15 @@ function blockswaprows(x::UInt64, y::UInt64, i::Integer, j::Integer)
     return (x ⊻ rowi ⊻ (rowj << shift), y ⊻ rowj ⊻ (rowi >> shift))
 end
 
+@inline _blockmul_slice(x::UInt64, y::UInt64, ::Val{i}) where i = ((x>>i) & COL_MASK) * ((y>>8i) & ROW_MASK)
+
 """
     matmulmat(x::UInt64, y::UInt64)::UInt64
 
 Multiplies two blocks.
 """
-function matmulmat(x::UInt64, y::UInt64)
-    function slice(x::UInt64, y::UInt64, i)
-        x = blockgetindex(x, :, i)
-        y = blockgetindex(y, i, :)
-        return colvecmulrowvec(x, y)
-    end
-    return slice(x, y, 0) ⊻ slice(x, y, 1) ⊻ slice(x, y, 2) ⊻ slice(x, y, 3) ⊻ slice(x, y, 4) ⊻ slice(x, y, 5) ⊻ slice(x, y, 6) ⊻ slice(x, y, 7)
+@inline function matmulmat(x::UInt64, y::UInt64)
+    return _blockmul_slice(x, y, Val(0)) ⊻ _blockmul_slice(x, y, Val(1)) ⊻ _blockmul_slice(x, y, Val(2)) ⊻ _blockmul_slice(x, y, Val(3)) ⊻ _blockmul_slice(x, y, Val(4)) ⊻ _blockmul_slice(x, y, Val(5)) ⊻ _blockmul_slice(x, y, Val(6)) ⊻ _blockmul_slice(x, y, Val(7))
 end
 
 """

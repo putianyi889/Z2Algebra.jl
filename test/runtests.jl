@@ -198,6 +198,21 @@ end
         end
     end
 
+    @testset "fill!" begin
+        A = rand(Z2Number, 13, 19)
+        u = A[:, 1]
+        v = A[1, :]
+
+        @test fill!(A, 1) == ones(Z2Number, 13, 19)
+        @test fill!(A, 0) == zeros(Z2Number, 13, 19)
+
+        @test fill!(u, 1) == ones(Z2Number, 13)
+        @test fill!(u, 0) == zeros(Z2Number, 13)
+
+        @test fill!(v, 1) == ones(Z2Number, 19)
+        @test fill!(v, 0) == zeros(Z2Number, 19)
+    end
+
     @testset "matrix getindex" begin
         A = rand(Z2Number, 13, 19)
         @test A[9,9] isa Z2Number

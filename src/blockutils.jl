@@ -88,7 +88,7 @@ Get the bit(s) at **0-based** position (i, j) in the block. This function is low
 @inline blockgetindex(x::UInt64, ::Colon, j::Integer) = (x >> unsigned(j)) & COL_MASK
 @inline blockgetindex(x::UInt64, ::Colon, ::Colon) = x
 @inline blockgetindex(x::UInt64, i::Integer, j::AbstractUnitRange) = (x >> unsigned(8i + first(j))) & (ROW_MASK >> unsigned(8 - length(j)))
-@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::Integer) = (x >> unsigned(j)) & (COL_MASK >> unsigned(8 - length(i)))
+@inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::Integer) = (x >> unsigned(j)) & (COL_MASK >> unsigned(8(8 - length(i))))
 @inline blockgetindex(x::UInt64, ::Colon, j::AbstractUnitRange) = (x >> unsigned(first(j))) & (COL_MASK * rowvecones(length(j)))
 @inline blockgetindex(x::UInt64, i::AbstractUnitRange, ::Colon) = (x >> unsigned(8first(i))) & (ROW_MASK * colvecones(length(i)))
 @inline blockgetindex(x::UInt64, i::AbstractUnitRange, j::AbstractUnitRange) = (x >> unsigned(8first(i) + first(j))) & blockones(length(i), length(j))

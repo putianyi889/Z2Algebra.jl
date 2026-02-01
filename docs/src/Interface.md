@@ -38,7 +38,7 @@
 |Method|`Z2Matrix`|`Z2RowVector`|`Z2ColVector`|
 |:---:|:---:|:---:|:---:|
 |`rand!`|❔|❔|❔|
-|`fill!`|❔|❔|❔|
+|`fill!`|✅|✅|✅|
 |`copyto!`|❔|❔|❔|
 |`copy`|❔|❔|❔|
 
